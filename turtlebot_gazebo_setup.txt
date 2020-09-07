@@ -1,0 +1,61 @@
+Software setup from - https://emanual.robotis.com/docs/en/platform/turtlebot3/pc_setup/#install-dependent-ros-packages
+
+Initial guide here - https://emanual.robotis.com/docs/en/platform/turtlebot3/simulation/
+
+The basics:
+in each terminal, run: 
+	export TURTLEBOT3_MODEL=waffle_pi
+
+To start a turtlebot in a world: 
+	roslaunch turtlebot3_gazebo turtlebot3_house.launch
+To start outputting sensor data: 
+	roslaunch turtlebot3_gazebo turtlebot3_gazebo_rviz.launch
+To control over keyboard: 
+	roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+
+This can be run with multiple turtlebots. Each bot will have /tb3_{#} as the start of all topic genetated by that robot, ex: /tb3_2/cmd_vel. Normal launch files/other can be used, by starting the command with ROS_NAMESPACE=tb3_{#}. To start the sample multi-bot simulation (house with 3): 
+	roslaunch turtlebot3_gazebo multi_turtlebot3.launch
+Then you can enact normal commands such as:
+	ROS_NAMESPACE=tb3_0 rosrun turtlebot3_teleop turtlebot3_teleop_key
+
+all topics created with a turtlebot: 
+/camera/parameter_descriptions
+/camera/parameter_updates
+/camera/rgb/camera_info
+/camera/rgb/image_raw
+/camera/rgb/image_raw/compressed
+/camera/rgb/image_raw/compressed/parameter_descriptions
+/camera/rgb/image_raw/compressed/parameter_updates
+/camera/rgb/image_raw/compressedDepth
+/camera/rgb/image_raw/compressedDepth/parameter_descriptions
+/camera/rgb/image_raw/compressedDepth/parameter_updates
+/camera/rgb/image_raw/theora
+/camera/rgb/image_raw/theora/parameter_descriptions
+/camera/rgb/image_raw/theora/parameter_updates
+/clock
+/cmd_vel
+/gazebo/link_states
+/gazebo/model_states
+/gazebo/parameter_descriptions
+/gazebo/parameter_updates
+/gazebo/set_link_state
+/gazebo/set_model_state
+/imu
+/joint_states
+/odom
+/rosout
+/rosout_agg
+/scan
+/tf
+
+Notes:
+/cmd_vel - Publish to this topic to control the robot
+/camera/rgb/image-raw - ~30fps images from the turtlebot's camera
+/scan - ~5/sec lidar scans
+/imu - IMU data
+/joint_states - Looks like wheel rotations
+
+Editing robot parameters:
+Look in ~/simulation_ws/src/turtlebot3/turtlebot3_description/urdf
+for: turtlebot3_burger.urdf.xacro and turtlebot3_burger.gazebo.xacro
+These files contain the physical and sensor definitions, including camera fov/framerate/resolution
