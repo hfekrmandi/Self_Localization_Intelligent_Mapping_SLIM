@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dse_msgs</name>
+  <version>1.0.1</version>
+  <description>
+    Message and service types: custom messages and services for dse_simulation package
+  </description>
+  <license>Apache 2.0</license>
+  <author email="alexanderfrye51@gmail.com">Alex Frye</author>
+  <maintainer email="alexanderfrye51@gmail.com">Alex Frye</maintainer>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <build_depend>message_generation</build_depend>
+  <build_export_depend>message_runtime</build_export_depend>
+  <exec_depend>message_runtime</exec_depend>
+</package>
