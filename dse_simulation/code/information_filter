@@ -4,14 +4,9 @@ import roslib
 import sys
 import rospy
 import numpy as np
-import cv2
-from cv2 import aruco
-import pickle
 import datetime
 import time
-from geometry_msgs.msg import Pose
 from dse_msgs.msg import PoseMarkers
-from cv_bridge import CvBridge, CvBridgeError
 from scipy.spatial.transform import Rotation as R
 
 roslib.load_manifest('dse_simulation')
@@ -32,15 +27,16 @@ def svgs_R_from_range_SRT(range):
     return r_var
 
 
-class aruco_pose:
+class information_filter:
 
-    def __init__(self, my_id):
-        self.image_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.callback)
-        self.pose_pub = rospy.Publisher("/dse/inf/var", PoseMarkers, queue_size=10)
+    def __init__(self, my_id, dt):
+        self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.callback)
+        self.inf_pub = rospy.Publisher("/dse/inf/var", PoseMarkers, queue_size=10)
 
         self.my_id = my_id
         self.dim_obs = 6
         self.dim_state = 12
+        self.dt = dt
 
         self.inf_P = []
         self.inf_x = []
@@ -55,7 +51,7 @@ class aruco_pose:
 
         self.inf_id_list = [self.my_id]
         self.inf_Y = 10000 * np.eye(self.dim_state, dtype=np.float64)
-        self.inf_y = 1 * np.arange(1, self.dim_state+1, dtype=np.float64)
+        self.inf_y = np.transpose(1 * np.arange(1, self.dim_state+1, dtype=np.float64))[:, None]
 
     def callback(self, data):
 
@@ -65,14 +61,12 @@ class aruco_pose:
 
         Y_11 = self.inf_Y
         y_11 = self.inf_y
-        x_11 = np.linalg.inv(Y_11) * y_11
+        x_11 = np.linalg.inv(Y_11).dot(y_11)
         P_11 = np.linalg.inv(Y_11)
         id_list = self.inf_id_list
 
         for id in observed_ids:
             if not np.isin(id, id_list):
-                print(id_list)
-                print(id)
                 id_list = np.concatenate((id_list, [id]))
                 dim = len(id_list) * self.dim_state
 
@@ -80,31 +74,32 @@ class aruco_pose:
                 Y_11_tmp[0:np.shape(Y_11)[0], 0:np.shape(Y_11)[0]] = Y_11
                 Y_11 = Y_11_tmp
 
-                y_11_tmp = 1 * np.arange(1, dim+1)
+                y_11_tmp = 1 * np.arange(1, dim+1)[:, None]
                 y_11_tmp[0:np.shape(y_11)[0]] = y_11
                 y_11 = y_11_tmp
 
-                x_11 = np.linalg.inv(Y_11) * y_11
+                x_11 = np.linalg.inv(Y_11).dot(y_11)
                 P_11 = np.linalg.inv(Y_11)
 
         print(id_list)
         n_stored = len(id_list)
         n_obs = len(observed_ids)
-        F_0 = np.zeros(n_stored * self.dim_state)
-        Q_0 = np.zeros(n_stored * self.dim_state)
+        F_0 = np.zeros((n_stored * self.dim_state, n_stored * self.dim_state))
+        Q_0 = np.zeros((n_stored * self.dim_state, n_stored * self.dim_state))
         R_0 = 0.001 * np.eye(n_obs * self.dim_obs)
         H_0 = np.zeros((n_obs * self.dim_obs, n_stored * self.dim_state))
         z_0 = np.zeros((n_obs * self.dim_obs, 1))
 
         for i in range(len(observed_ids)):
             id = observed_ids[i]
-            index = np.where(id_list == id)[0]
-            obs_index = np.where(id_list == self.my_id)
+            index = np.where(id_list == id)[0][0]
+            obs_index = np.where(id_list == self.my_id)[0][0]
 
-            i_low = self.dim_obs * (i - 1) + 1
-            i_high = i_low + self.dim_obs - 1
+            i_low = self.dim_obs * i
+            i_high = i_low + self.dim_obs
 
-            z_pos = [observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z]
+            z_pos = np.array([observed_poses[i].position.x, observed_poses[i].position.y,
+                              observed_poses[i].position.z])
 
             quat = [1, 2, 3, 4]
             quat[0] = observed_poses[i].orientation.x
@@ -116,12 +111,128 @@ class aruco_pose:
 
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * svgs_R_from_range_SRT(dist)
-            H_0[i_low:i_high, :] = self.H_camera(x_11, obs_index, index)
-            z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))
+            H_0[i_low:i_high, :] = self.h_camera(x_11, obs_index, index)
+            z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+
+        for i in range(len(id_list)):
+            i_low = self.dim_state * i
+            i_high = i_low + self.dim_state
+            Q_0[i_low:i_high, i_low:i_high] = 1 * self.q_distance(self.dt, x_11, i)
+            F_0[i_low:i_high, i_low:i_high] = self.f_unicycle_2d(self.dt, x_11, i)
+
+        # Compute the information filter steps
+        M_0 = np.transpose(np.linalg.inv(F_0)).dot(Y_11.dot(np.linalg.inv(F_0)))
+        C_0 = M_0.dot(np.linalg.inv(M_0 + np.linalg.inv(Q_0)))
+        L_0 = np.eye(np.shape(C_0)[0]) - C_0
+        Y_01 = L_0.dot(M_0.dot(np.transpose(L_0))) + C_0.dot(np.linalg.inv(Q_0).dot(np.transpose(C_0)))
+        y_01 = L_0.dot(np.transpose(np.linalg.inv(F_0)).dot(y_11))
+        Y_00 = Y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(H_0))
+        y_00 = y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(z_0))
+
+        x_01 = F_0.dot(x_11)
+        P_01 = F_0.dot(P_11.dot(np.transpose(F_0))) + Q_0
+        print(np.shape(z_0), np.shape(H_0), np.shape(x_01))
+        y = z_0 - H_0.dot(x_01)
+        S = H_0.dot(P_01.dot(np.transpose(H_0))) + R_0
+        K = P_01.dot(np.transpose(H_0).dot(np.linalg.inv(S)))
+        print(np.shape(x_01), np.shape(K), np.shape(y))
+        x_00 = x_01 + K.dot(y)
+        P_00 = (np.eye(np.shape(K)[0]) - K.dot(H_0).dot(P_01))
+
+        x_inf = np.linalg.inv(Y_00).dot(y_00)
+        P_inf = np.linalg.inv(Y_00)
+
+        P_kal = F_0.dot(np.linalg.inv(Y_11).dot((np.transpose(F_0)))) + Q_0
+        P_inf = np.linalg.inv(Y_01)
+
+        print(P_kal)
+        print(P_inf)
+
+        # Store the consensus variables
+        self.inf_Y = Y_01
+        self.inf_y = y_01
+        self.inf_I = np.transpose(H_0).dot(np.linalg.inv(R_0).dot(H_0))
+        self.inf_i = np.transpose(H_0).dot(np.linalg.inv(R_0).dot(z_0))
+
+        self.inf_id_list = id_list
+        self.inf_id_obs = observed_ids
+
+    def state_from_id(self, x, id_list, id):
+        index = np.where(id_list == id)[0][0]
+        i_low = self.dim_state * index
+        i_high = i_low + self.dim_state
+        return x[i_low:i_high]
+
+    def cov_from_id(self, P, id_list, id):
+        index = np.where(id_list == id)[0][0]
+        i_low = self.dim_state * index
+        i_high = i_low + self.dim_state
+        return P[i_low:i_high, i_low:i_high]
+
+    def h_camera(self, x, agent1, agent2):
+        agent1_row_min = self.dim_state * agent1
+        agent1_row_max = agent1_row_min + self.dim_obs
+        agent2_row_min = self.dim_state * agent2
+        agent2_row_max = agent2_row_min + self.dim_obs
+
+        n_states = np.shape(x)[0]
+        H = np.zeros((self.dim_obs, n_states))
+        H[:, agent1_row_min:agent1_row_max] = -np.eye(self.dim_obs)
+        H[:, agent2_row_min:agent2_row_max] = np.eye(self.dim_obs)
+        return H
+
+    def f_unicycle_2d(self, dt, x, agent1):
+        agent1_row_min = self.dim_state * agent1
+        agent1_row_max = agent1_row_min + self.dim_state
+
+        x1 = x[agent1_row_min:agent1_row_max]
+
+        F = np.eye(self.dim_state)
+        w = x1[10]
+
+        if w == 0:
+            F[1, 7] = dt
+            F[1, 8] = 0
+            F[2, 7] = 0
+            F[2, 8] = dt
+
+            F[7, 7] = 1
+            F[7, 8] = 0
+            F[8, 7] = 0
+            F[8, 8] = 1
+        else:
+            F[1, 7] = np.sin(w*dt) / w
+            F[1, 8] = -(1 - np.cos(w*dt)) / w
+            F[2, 7] = (1 - np.cos(w*dt)) / w
+            F[2, 8] = np.sin(w*dt) / w
+
+            F[7, 7] = np.cos(w*dt)
+            F[7, 8] = -np.sin(w*dt)
+            F[8, 7] = np.sin(w*dt)
+            F[8, 8] = np.cos(w*dt)
+
+        block = dt * np.eye(4)
+        F[2:6, 8:12] = block
+        return F
+
+    def q_distance(self, dt, x, agent1):
+        i_low = self.dim_state * agent1
+        i_high = i_low + self.dim_state
+
+        Q_pos = (dt * (np.linalg.norm(x[i_low+6:i_low+9]) + 0.5) * 0.05) ** 2
+        Q_theta = (dt * (np.linalg.norm(x[i_low+9:i_low+12]) + 0.5) * 0.05) ** 2
+        Q = 1 * np.eye(12)
+        Q[6:9, 6:9] = 0.001 * np.eye(3)
+        Q[9:12, 9:12] = 0.001 * np.eye(3)
+        if Q_pos > 0:
+            Q[0:3, 0:3] = Q_pos * np.eye(3)
+        if Q_theta > 0:
+            Q[3:6, 3:6] = Q_theta * np.eye(3)
+        return Q
 
 
 def main(args):
-    ic = aruco_pose(1)
+    ic = information_filter(1, 0.1)
     rospy.init_node('information_filter_node', anonymous=True)
     try:
         rospy.spin()
