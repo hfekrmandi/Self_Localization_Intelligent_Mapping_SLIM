@@ -1,0 +1,133 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import roslib
+import sys
+import rospy
+import numpy as np
+import cv2
+from cv2 import aruco
+import pickle
+import datetime
+import time
+from geometry_msgs.msg import Pose
+from dse_msgs.msg import PoseMarkers
+from cv_bridge import CvBridge, CvBridgeError
+from scipy.spatial.transform import Rotation as R
+
+roslib.load_manifest('dse_simulation')
+
+
+def svgs_R_from_range_SRT(range):
+    # Assuming linear error with a slope of:
+    # [x y z phi theta psi]
+    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
+    x = np.transpose([0.0515, 0.0515, 0.018, 0.0023, 0.0023, 0.0023]) # Radians
+    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
+
+    # Slope values are for 3-sigma error, so dividing by 3
+    range = (range / 3) * np.eye(6)
+    r_std = np.multiply(range, x)
+    r_var = np.multiply(r_std, r_std)
+    # Compute variance from standard deviation
+    return r_var
+
+
+class aruco_pose:
+
+    def __init__(self, my_id):
+        self.image_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.callback)
+        self.pose_pub = rospy.Publisher("/dse/inf/var", PoseMarkers, queue_size=10)
+
+        self.my_id = my_id
+        self.dim_obs = 6
+        self.dim_state = 12
+
+        self.inf_P = []
+        self.inf_x = []
+        #self.inf_Y = []
+        #self.inf_y = []
+        self.inf_I = []
+        self.inf_i = []
+
+        #self.inf_id_list = []
+        self.inf_id_obs = []
+        self.inf_id_comm = []
+
+        self.inf_id_list = [self.my_id]
+        self.inf_Y = 10000 * np.eye(self.dim_state, dtype=np.float64)
+        self.inf_y = 1 * np.arange(1, self.dim_state+1, dtype=np.float64)
+
+    def callback(self, data):
+
+        observed_poses = data.pose_array.poses
+        observed_ids = data.ids
+        n = 1 + len(observed_ids)
+
+        Y_11 = self.inf_Y
+        y_11 = self.inf_y
+        x_11 = np.linalg.inv(Y_11) * y_11
+        P_11 = np.linalg.inv(Y_11)
+        id_list = self.inf_id_list
+
+        for id in observed_ids:
+            if not np.isin(id, id_list):
+                print(id_list)
+                print(id)
+                id_list = np.concatenate((id_list, [id]))
+                dim = len(id_list) * self.dim_state
+
+                Y_11_tmp = 100 * np.eye(dim)
+                Y_11_tmp[0:np.shape(Y_11)[0], 0:np.shape(Y_11)[0]] = Y_11
+                Y_11 = Y_11_tmp
+
+                y_11_tmp = 1 * np.arange(1, dim+1)
+                y_11_tmp[0:np.shape(y_11)[0]] = y_11
+                y_11 = y_11_tmp
+
+                x_11 = np.linalg.inv(Y_11) * y_11
+                P_11 = np.linalg.inv(Y_11)
+
+        print(id_list)
+        n_stored = len(id_list)
+        n_obs = len(observed_ids)
+        F_0 = np.zeros(n_stored * self.dim_state)
+        Q_0 = np.zeros(n_stored * self.dim_state)
+        R_0 = 0.001 * np.eye(n_obs * self.dim_obs)
+        H_0 = np.zeros((n_obs * self.dim_obs, n_stored * self.dim_state))
+        z_0 = np.zeros((n_obs * self.dim_obs, 1))
+
+        for i in range(len(observed_ids)):
+            id = observed_ids[i]
+            index = np.where(id_list == id)[0]
+            obs_index = np.where(id_list == self.my_id)
+
+            i_low = self.dim_obs * (i - 1) + 1
+            i_high = i_low + self.dim_obs - 1
+
+            z_pos = [observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z]
+
+            quat = [1, 2, 3, 4]
+            quat[0] = observed_poses[i].orientation.x
+            quat[1] = observed_poses[i].orientation.y
+            quat[2] = observed_poses[i].orientation.z
+            quat[3] = observed_poses[i].orientation.w
+            r = R.from_quat(quat)
+            z_eul = r.as_euler('zyx')
+
+            dist = np.linalg.norm(z_pos)
+            R_0[i_low:i_high, i_low:i_high] = 1 * svgs_R_from_range_SRT(dist)
+            H_0[i_low:i_high, :] = self.H_camera(x_11, obs_index, index)
+            z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))
+
+
+def main(args):
+    ic = aruco_pose(1)
+    rospy.init_node('information_filter_node', anonymous=True)
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Shutting down")
+
+
+if __name__ == '__main__':
+    main(sys.argv)

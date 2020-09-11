@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>Autonomous-GNC-MAS</name>
+  <version>1.2.3</version>
+  <description>
+    ROS packages for multi-agent consensus simulation
+  </description>
+  <license>TODO</license>
+  <author email="alexander.frye@mines.sdsmt.edu">Alex Frye</author>
+  <maintainer email="alexander.frye@mines.sdsmt.edu">Alex Frye</maintainer>
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>dse_msgs</exec_depend>
+  <exec_depend>dse_simulation</exec_depend>
+  <export><metapackage/></export>
+</package>
