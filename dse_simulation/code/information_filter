@@ -7,36 +7,30 @@ import numpy as np
 import datetime
 import time
 from dse_msgs.msg import PoseMarkers
+from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import MultiArrayLayout
+from std_msgs.msg import MultiArrayDimension
+from dse_msgs.msg import InfFilterPartials
+from dse_msgs.msg import InfFilterResults
 from scipy.spatial.transform import Rotation as R
+
+from dse_lib import *
 
 roslib.load_manifest('dse_simulation')
 
-
-def svgs_R_from_range_SRT(range):
-    # Assuming linear error with a slope of:
-    # [x y z phi theta psi]
-    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
-    x = np.transpose([0.0515, 0.0515, 0.018, 0.0023, 0.0023, 0.0023]) # Radians
-    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
-
-    # Slope values are for 3-sigma error, so dividing by 3
-    range = (range / 3) * np.eye(6)
-    r_std = np.multiply(range, x)
-    r_var = np.multiply(r_std, r_std)
-    # Compute variance from standard deviation
-    return r_var
-
-
 class information_filter:
 
-    def __init__(self, my_id, dt):
-        self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.callback)
-        self.inf_pub = rospy.Publisher("/dse/inf/var", PoseMarkers, queue_size=10)
+    def __init__(self, my_id):
+        self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
+        self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
+        self.inf_pub = rospy.Publisher("/dse/inf/partial", InfFilterPartials, queue_size=10)
 
         self.my_id = my_id
         self.dim_obs = 6
         self.dim_state = 12
-        self.dt = dt
+        self.dt = 0.1
+        self.t_last = rospy.get_time()
+        self.euler_order = 'zyx'
 
         self.inf_P = []
         self.inf_x = []
@@ -50,10 +44,17 @@ class information_filter:
         self.inf_id_comm = []
 
         self.inf_id_list = [self.my_id]
-        self.inf_Y = 10000 * np.eye(self.dim_state, dtype=np.float64)
+        self.inf_Y = 100 * np.eye(self.dim_state, dtype=np.float64)
         self.inf_y = np.transpose(1 * np.arange(1, self.dim_state+1, dtype=np.float64))[:, None]
 
-    def callback(self, data):
+    def results_callback(self, data):
+        self.inf_id_list = np.array(data.ids)
+        self.inf_Y = multi_array_2d_output(data.inf_matrix)
+        self.inf_y = multi_array_2d_output(data.inf_vector)
+
+    def measurement_callback(self, data):
+        self.dt = rospy.get_time() - self.t_last
+        self.t_last = rospy.get_time()
 
         observed_poses = data.pose_array.poses
         observed_ids = data.ids
@@ -62,6 +63,7 @@ class information_filter:
         Y_11 = self.inf_Y
         y_11 = self.inf_y
         x_11 = np.linalg.inv(Y_11).dot(y_11)
+        print('x_11 = ' + str(x_11))
         P_11 = np.linalg.inv(Y_11)
         id_list = self.inf_id_list
 
@@ -81,7 +83,7 @@ class information_filter:
                 x_11 = np.linalg.inv(Y_11).dot(y_11)
                 P_11 = np.linalg.inv(Y_11)
 
-        print(id_list)
+        print("Agent " + str(self.my_id) + "'s id list is: " + str(id_list))
         n_stored = len(id_list)
         n_obs = len(observed_ids)
         F_0 = np.zeros((n_stored * self.dim_state, n_stored * self.dim_state))
@@ -107,18 +109,21 @@ class information_filter:
             quat[2] = observed_poses[i].orientation.z
             quat[3] = observed_poses[i].orientation.w
             r = R.from_quat(quat)
-            z_eul = r.as_euler('zyx')
+            z_eul = r.as_euler(self.euler_order)
 
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * svgs_R_from_range_SRT(dist)
-            H_0[i_low:i_high, :] = self.h_camera(x_11, obs_index, index)
+            print(svgs_R_from_range_SRT(dist))
+            # H_0[i_low:i_high, :] = self.h_camera(x_11, obs_index, index)
             z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+            H_0[i_low:i_high, :] = self.h_camera_good(x_11, z_0[i_low:i_high], obs_index, index)
 
         for i in range(len(id_list)):
             i_low = self.dim_state * i
             i_high = i_low + self.dim_state
             Q_0[i_low:i_high, i_low:i_high] = 1 * self.q_distance(self.dt, x_11, i)
-            F_0[i_low:i_high, i_low:i_high] = self.f_unicycle_2d(self.dt, x_11, i)
+            # F_0[i_low:i_high, i_low:i_high] = self.f_unicycle_2d(self.dt, x_11, i)
+            F_0[i_low:i_high, i_low:i_high] = self.f_eye(self.dt, x_11, i)
 
         # Compute the information filter steps
         M_0 = np.transpose(np.linalg.inv(F_0)).dot(Y_11.dot(np.linalg.inv(F_0)))
@@ -131,11 +136,9 @@ class information_filter:
 
         x_01 = F_0.dot(x_11)
         P_01 = F_0.dot(P_11.dot(np.transpose(F_0))) + Q_0
-        print(np.shape(z_0), np.shape(H_0), np.shape(x_01))
         y = z_0 - H_0.dot(x_01)
         S = H_0.dot(P_01.dot(np.transpose(H_0))) + R_0
         K = P_01.dot(np.transpose(H_0).dot(np.linalg.inv(S)))
-        print(np.shape(x_01), np.shape(K), np.shape(y))
         x_00 = x_01 + K.dot(y)
         P_00 = (np.eye(np.shape(K)[0]) - K.dot(H_0).dot(P_01))
 
@@ -145,17 +148,25 @@ class information_filter:
         P_kal = F_0.dot(np.linalg.inv(Y_11).dot((np.transpose(F_0)))) + Q_0
         P_inf = np.linalg.inv(Y_01)
 
-        print(P_kal)
-        print(P_inf)
-
         # Store the consensus variables
-        self.inf_Y = Y_01
-        self.inf_y = y_01
-        self.inf_I = np.transpose(H_0).dot(np.linalg.inv(R_0).dot(H_0))
-        self.inf_i = np.transpose(H_0).dot(np.linalg.inv(R_0).dot(z_0))
+        inf_Y = Y_01
+        inf_y = y_01
+        inf_I = np.transpose(H_0).dot(np.linalg.inv(R_0).dot(H_0))
+        inf_i = np.transpose(H_0).dot(np.linalg.inv(R_0).dot(z_0))
+        # print('Information vector: ' + str(inf_Y))
+        # print('Observation vector: ' + str(inf_I))
+        inf_id_list = id_list
+        inf_id_obs = observed_ids
 
-        self.inf_id_list = id_list
-        self.inf_id_obs = observed_ids
+        # Write the consensus variables to the publisher
+        inf_partial = InfFilterPartials()
+        inf_partial.sender_id = self.my_id
+        inf_partial.ids = inf_id_list
+        inf_partial.inf_matrix_prior = multi_array_2d_input(inf_Y, inf_partial.inf_matrix_prior)
+        inf_partial.inf_vector_prior = multi_array_2d_input(inf_y, inf_partial.inf_vector_prior)
+        inf_partial.obs_matrix = multi_array_2d_input(inf_I, inf_partial.obs_matrix)
+        inf_partial.obs_vector = multi_array_2d_input(inf_i, inf_partial.obs_vector)
+        self.inf_pub.publish(inf_partial)
 
     def state_from_id(self, x, id_list, id):
         index = np.where(id_list == id)[0][0]
@@ -179,6 +190,40 @@ class information_filter:
         H = np.zeros((self.dim_obs, n_states))
         H[:, agent1_row_min:agent1_row_max] = -np.eye(self.dim_obs)
         H[:, agent2_row_min:agent2_row_max] = np.eye(self.dim_obs)
+        return H
+
+    def h_camera_good(self, x, z, agent1, agent2):
+        agent1_row_min = self.dim_state * agent1
+        agent1_row_max = agent1_row_min + self.dim_obs
+        agent2_row_min = self.dim_state * agent2
+        agent2_row_max = agent2_row_min + self.dim_obs
+
+        x1 = x[agent1_row_min:agent1_row_max]
+        t1 = x1[0:3]
+        r1 = R.from_euler(self.euler_order, x1[3:6, 0])
+        R1 = r1.as_dcm()
+
+        x2 = x[agent2_row_min:agent2_row_max]
+        t2 = x2[0:3]
+        r2 = R.from_euler(self.euler_order, x2[3:6, 0])
+        R2 = r2.as_dcm()
+
+        print(x1, x2)
+        print(z)
+        zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
+        zR = np.transpose(R1).dot(R2)
+        zr = R.from_dcm(zR)
+        zr = zr.as_euler(self.euler_order)
+        z_calc = np.concatenate((zt, zr))[:, None]
+        print(z_calc)
+        print('\n\n')
+
+        n_states = np.shape(x)[0]
+        H = np.zeros((self.dim_obs, n_states))
+        # H[:, agent1_row_min:agent1_row_max] = np.multiply(np.eye(self.dim_obs), z_calc/x1)
+        Jacobian = np.array(dual_relative_obs_jacobian(x1, x2))
+        H[:, agent1_row_min:agent1_row_max] = Jacobian[:, 0:6]
+        H[:, agent2_row_min:agent2_row_max] = Jacobian[:, 6:12]
         return H
 
     def f_unicycle_2d(self, dt, x, agent1):
@@ -215,6 +260,9 @@ class information_filter:
         F[2:6, 8:12] = block
         return F
 
+    def f_eye(self, dt, x, agent1):
+        return np.eye(self.dim_state)
+
     def q_distance(self, dt, x, agent1):
         i_low = self.dim_state * agent1
         i_high = i_low + self.dim_state
@@ -222,8 +270,8 @@ class information_filter:
         Q_pos = (dt * (np.linalg.norm(x[i_low+6:i_low+9]) + 0.5) * 0.05) ** 2
         Q_theta = (dt * (np.linalg.norm(x[i_low+9:i_low+12]) + 0.5) * 0.05) ** 2
         Q = 1 * np.eye(12)
-        Q[6:9, 6:9] = 0.001 * np.eye(3)
-        Q[9:12, 9:12] = 0.001 * np.eye(3)
+        Q[6:9, 6:9] = 0.0001 * np.eye(3)
+        Q[9:12, 9:12] = 0.0001 * np.eye(3)
         if Q_pos > 0:
             Q[0:3, 0:3] = Q_pos * np.eye(3)
         if Q_theta > 0:
@@ -232,8 +280,8 @@ class information_filter:
 
 
 def main(args):
-    ic = information_filter(1, 0.1)
     rospy.init_node('information_filter_node', anonymous=True)
+    il = information_filter(1)
     try:
         rospy.spin()
     except KeyboardInterrupt:
