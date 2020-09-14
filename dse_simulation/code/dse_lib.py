@@ -12,6 +12,7 @@ from dse_msgs.msg import InfFilterPartials
 from dse_msgs.msg import InfFilterResults
 from scipy.spatial.transform import Rotation as R
 
+
 def svgs_R_from_range_SRT(range):
     # Assuming linear error with a slope of:
     # [x y z phi theta psi]
@@ -21,6 +22,21 @@ def svgs_R_from_range_SRT(range):
 
     # Slope values are for 3-sigma error, so dividing by 3
     range = (range / 3) * np.eye(6)
+    r_std = np.multiply(range, x)
+    r_var = np.multiply(r_std, r_std)
+    # Compute variance from standard deviation
+    return r_var
+
+
+def aruco_R_from_range(range):
+    # Assuming linear error with a slope of:
+    # [x y z phi theta psi]
+    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
+    x = 10*np.transpose([0.01, 0.01, 0.01, 0.01, 0.01, 0.01]) # Radians
+    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
+
+    # Slope values are for 3-sigma error, so dividing by 3
+    range = range * np.eye(6)
     r_std = np.multiply(range, x)
     r_var = np.multiply(r_std, r_std)
     # Compute variance from standard deviation

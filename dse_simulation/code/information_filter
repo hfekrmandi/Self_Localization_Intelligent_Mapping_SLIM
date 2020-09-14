@@ -20,11 +20,16 @@ roslib.load_manifest('dse_simulation')
 
 class information_filter:
 
+    # Set up initial variables
+    # Pass in the ID of this agent
     def __init__(self, my_id):
+
+        # Define publishers and subscribers
         self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
         self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
         self.inf_pub = rospy.Publisher("/dse/inf/partial", InfFilterPartials, queue_size=10)
 
+        # Define static variables
         self.my_id = my_id
         self.dim_obs = 6
         self.dim_state = 12
@@ -32,57 +37,63 @@ class information_filter:
         self.t_last = rospy.get_time()
         self.euler_order = 'zyx'
 
+        # Create information variables
         self.inf_P = []
         self.inf_x = []
         #self.inf_Y = []
         #self.inf_y = []
         self.inf_I = []
         self.inf_i = []
-
         #self.inf_id_list = []
         self.inf_id_obs = []
         self.inf_id_comm = []
-
         self.inf_id_list = [self.my_id]
-        self.inf_Y = 100 * np.eye(self.dim_state, dtype=np.float64)
-        self.inf_y = np.transpose(1 * np.arange(1, self.dim_state+1, dtype=np.float64))[:, None]
+        self.inf_Y = 10000 * np.eye(self.dim_state, dtype=np.float64)
+        self.inf_y = 0.01 * np.transpose(1 * np.arange(1, self.dim_state+1, dtype=np.float64))[:, None]
 
+    # When the direct estimator or consensus returns the combined information variables
     def results_callback(self, data):
         self.inf_id_list = np.array(data.ids)
         self.inf_Y = multi_array_2d_output(data.inf_matrix)
         self.inf_y = multi_array_2d_output(data.inf_vector)
 
+    # When the camera sends a measurement
     def measurement_callback(self, data):
+
+        # Compute the actual dt
         self.dt = rospy.get_time() - self.t_last
         self.t_last = rospy.get_time()
 
+        # Grab the tag poses from the camera
         observed_poses = data.pose_array.poses
         observed_ids = data.ids
         n = 1 + len(observed_ids)
 
+        # update local values from the last time step
         Y_11 = self.inf_Y
         y_11 = self.inf_y
         x_11 = np.linalg.inv(Y_11).dot(y_11)
-        print('x_11 = ' + str(x_11))
         P_11 = np.linalg.inv(Y_11)
         id_list = self.inf_id_list
 
+        # If we find an ID that isn't currently known, add it
         for id in observed_ids:
             if not np.isin(id, id_list):
                 id_list = np.concatenate((id_list, [id]))
                 dim = len(id_list) * self.dim_state
 
-                Y_11_tmp = 100 * np.eye(dim)
+                Y_11_tmp = 10000 * np.eye(dim)
                 Y_11_tmp[0:np.shape(Y_11)[0], 0:np.shape(Y_11)[0]] = Y_11
                 Y_11 = Y_11_tmp
 
-                y_11_tmp = 1 * np.arange(1, dim+1)[:, None]
+                y_11_tmp = 0.01 * np.arange(1, dim+1)[:, None]
                 y_11_tmp[0:np.shape(y_11)[0]] = y_11
                 y_11 = y_11_tmp
 
                 x_11 = np.linalg.inv(Y_11).dot(y_11)
                 P_11 = np.linalg.inv(Y_11)
 
+        # Define the sizes of variables
         print("Agent " + str(self.my_id) + "'s id list is: " + str(id_list))
         n_stored = len(id_list)
         n_obs = len(observed_ids)
@@ -92,6 +103,7 @@ class information_filter:
         H_0 = np.zeros((n_obs * self.dim_obs, n_stored * self.dim_state))
         z_0 = np.zeros((n_obs * self.dim_obs, 1))
 
+        # Fill in H and Z
         for i in range(len(observed_ids)):
             id = observed_ids[i]
             index = np.where(id_list == id)[0][0]
@@ -112,18 +124,26 @@ class information_filter:
             z_eul = r.as_euler(self.euler_order)
 
             dist = np.linalg.norm(z_pos)
-            R_0[i_low:i_high, i_low:i_high] = 1 * svgs_R_from_range_SRT(dist)
-            print(svgs_R_from_range_SRT(dist))
+            R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range(dist)
+            print('aruco range error estimate: ' + str(aruco_R_from_range(dist)))
             # H_0[i_low:i_high, :] = self.h_camera(x_11, obs_index, index)
             z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
             H_0[i_low:i_high, :] = self.h_camera_good(x_11, z_0[i_low:i_high], obs_index, index)
 
+        # Fill in Q and F (Different for waypoint vs. robot)
         for i in range(len(id_list)):
-            i_low = self.dim_state * i
-            i_high = i_low + self.dim_state
-            Q_0[i_low:i_high, i_low:i_high] = 1 * self.q_distance(self.dt, x_11, i)
-            # F_0[i_low:i_high, i_low:i_high] = self.f_unicycle_2d(self.dt, x_11, i)
-            F_0[i_low:i_high, i_low:i_high] = self.f_eye(self.dt, x_11, i)
+            if id_list[i] == 0:
+                i_low = self.dim_state * i
+                i_high = i_low + self.dim_state
+                Q_0[i_low:i_high, i_low:i_high] = 1 * self.q_distance(self.dt, x_11, i)
+                # F_0[i_low:i_high, i_low:i_high] = self.f_unicycle_2d(self.dt, x_11, i)
+                F_0[i_low:i_high, i_low:i_high] = self.f_eye(self.dt, x_11, i)
+            else:
+                i_low = self.dim_state * i
+                i_high = i_low + self.dim_state
+                Q_0[i_low:i_high, i_low:i_high] = 1 * self.q_distance(self.dt, x_11, i)
+                # F_0[i_low:i_high, i_low:i_high] = self.f_unicycle_2d(self.dt, x_11, i)
+                F_0[i_low:i_high, i_low:i_high] = self.f_unicycle_2d(self.dt, x_11, i)
 
         # Compute the information filter steps
         M_0 = np.transpose(np.linalg.inv(F_0)).dot(Y_11.dot(np.linalg.inv(F_0)))
@@ -134,6 +154,7 @@ class information_filter:
         Y_00 = Y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(H_0))
         y_00 = y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(z_0))
 
+        # Compute the Kalman filter steps (For comparison and math checking)
         x_01 = F_0.dot(x_11)
         P_01 = F_0.dot(P_11.dot(np.transpose(F_0))) + Q_0
         y = z_0 - H_0.dot(x_01)
@@ -142,9 +163,10 @@ class information_filter:
         x_00 = x_01 + K.dot(y)
         P_00 = (np.eye(np.shape(K)[0]) - K.dot(H_0).dot(P_01))
 
+        # Compare information filter and kalman filter outputs
         x_inf = np.linalg.inv(Y_00).dot(y_00)
+        print('state: ' + str(x_inf))
         P_inf = np.linalg.inv(Y_00)
-
         P_kal = F_0.dot(np.linalg.inv(Y_11).dot((np.transpose(F_0)))) + Q_0
         P_inf = np.linalg.inv(Y_01)
 
@@ -168,6 +190,7 @@ class information_filter:
         inf_partial.obs_vector = multi_array_2d_input(inf_i, inf_partial.obs_vector)
         self.inf_pub.publish(inf_partial)
 
+    # Helper functions
     def state_from_id(self, x, id_list, id):
         index = np.where(id_list == id)[0][0]
         i_low = self.dim_state * index
@@ -180,18 +203,7 @@ class information_filter:
         i_high = i_low + self.dim_state
         return P[i_low:i_high, i_low:i_high]
 
-    def h_camera(self, x, agent1, agent2):
-        agent1_row_min = self.dim_state * agent1
-        agent1_row_max = agent1_row_min + self.dim_obs
-        agent2_row_min = self.dim_state * agent2
-        agent2_row_max = agent2_row_min + self.dim_obs
-
-        n_states = np.shape(x)[0]
-        H = np.zeros((self.dim_obs, n_states))
-        H[:, agent1_row_min:agent1_row_max] = -np.eye(self.dim_obs)
-        H[:, agent2_row_min:agent2_row_max] = np.eye(self.dim_obs)
-        return H
-
+    # Define measurement jacobian for camera
     def h_camera_good(self, x, z, agent1, agent2):
         agent1_row_min = self.dim_state * agent1
         agent1_row_max = agent1_row_min + self.dim_obs
@@ -208,15 +220,12 @@ class information_filter:
         r2 = R.from_euler(self.euler_order, x2[3:6, 0])
         R2 = r2.as_dcm()
 
-        print(x1, x2)
         print(z)
         zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
         zR = np.transpose(R1).dot(R2)
         zr = R.from_dcm(zR)
         zr = zr.as_euler(self.euler_order)
         z_calc = np.concatenate((zt, zr))[:, None]
-        print(z_calc)
-        print('\n\n')
 
         n_states = np.shape(x)[0]
         H = np.zeros((self.dim_obs, n_states))
@@ -224,8 +233,11 @@ class information_filter:
         Jacobian = np.array(dual_relative_obs_jacobian(x1, x2))
         H[:, agent1_row_min:agent1_row_max] = Jacobian[:, 0:6]
         H[:, agent2_row_min:agent2_row_max] = Jacobian[:, 6:12]
+        print(H.dot(x))
+        print('\n\n')
         return H
 
+    # Define motion jacobian for unicycle robot
     def f_unicycle_2d(self, dt, x, agent1):
         agent1_row_min = self.dim_state * agent1
         agent1_row_max = agent1_row_min + self.dim_state
@@ -233,49 +245,58 @@ class information_filter:
         x1 = x[agent1_row_min:agent1_row_max]
 
         F = np.eye(self.dim_state)
-        w = x1[10]
+        w = x1[9]
 
         if w == 0:
+            F[0, 6] = dt
+            F[0, 7] = 0
+            F[1, 6] = 0
             F[1, 7] = dt
-            F[1, 8] = 0
-            F[2, 7] = 0
-            F[2, 8] = dt
 
+            F[6, 6] = 1
+            F[6, 7] = 0
+            F[7, 6] = 0
             F[7, 7] = 1
-            F[7, 8] = 0
-            F[8, 7] = 0
-            F[8, 8] = 1
         else:
+            F[0, 6] = np.sin(w*dt) / w
+            F[0, 7] = -(1 - np.cos(w*dt)) / w
+            F[1, 6] = (1 - np.cos(w*dt)) / w
             F[1, 7] = np.sin(w*dt) / w
-            F[1, 8] = -(1 - np.cos(w*dt)) / w
-            F[2, 7] = (1 - np.cos(w*dt)) / w
-            F[2, 8] = np.sin(w*dt) / w
 
+            F[6, 6] = np.cos(w*dt)
+            F[6, 7] = -np.sin(w*dt)
+            F[7, 6] = np.sin(w*dt)
             F[7, 7] = np.cos(w*dt)
-            F[7, 8] = -np.sin(w*dt)
-            F[8, 7] = np.sin(w*dt)
-            F[8, 8] = np.cos(w*dt)
 
         block = dt * np.eye(4)
         F[2:6, 8:12] = block
         return F
 
+    # Define stationary jacobian for waypoints
     def f_eye(self, dt, x, agent1):
-        return np.eye(self.dim_state)
+        F = np.eye(self.dim_state)
+        return F
 
+    # Define motion model covariance (distnace-based)
     def q_distance(self, dt, x, agent1):
         i_low = self.dim_state * agent1
         i_high = i_low + self.dim_state
 
-        Q_pos = (dt * (np.linalg.norm(x[i_low+6:i_low+9]) + 0.5) * 0.05) ** 2
-        Q_theta = (dt * (np.linalg.norm(x[i_low+9:i_low+12]) + 0.5) * 0.05) ** 2
+        Q_pos = (dt * (np.linalg.norm(x[i_low+6:i_low+9]) + 0.001) * 0.05) ** 2
+        Q_theta = (dt * (np.linalg.norm(x[i_low+9:i_low+12]) + 0.001) * 0.05) ** 2
+        print('Q_pos: ' + str(Q_pos) + ' and Q_theta: ' + str(Q_theta))
         Q = 1 * np.eye(12)
-        Q[6:9, 6:9] = 0.0001 * np.eye(3)
-        Q[9:12, 9:12] = 0.0001 * np.eye(3)
+        Q[6:9, 6:9] = 0.000001 / (dt ** 2) * np.eye(3)
+        Q[9:12, 9:12] = 0.000001 / (dt ** 2) * np.eye(3)
         if Q_pos > 0:
             Q[0:3, 0:3] = Q_pos * np.eye(3)
         if Q_theta > 0:
             Q[3:6, 3:6] = Q_theta * np.eye(3)
+        return Q
+
+    # Define motion model covariance (static)
+    def q_const(self, dt, x, agent1):
+        Q = 0.000001 * np.eye(12)
         return Q
 
 

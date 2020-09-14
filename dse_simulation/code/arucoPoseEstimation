@@ -102,9 +102,9 @@ class aruco_pose:
                 print(rvecs)
                 pose = Pose()
 
-                pose.position.x = tvecs[0][i][0]
-                pose.position.y = tvecs[0][i][1]
-                pose.position.z = tvecs[0][i][2]
+                pose.position.x = -tvecs[0][i][0]
+                pose.position.y = -tvecs[0][i][2]
+                pose.position.z = tvecs[0][i][1]
 
                 r = R.from_rotvec(rvecs[0][i])
                 quat = r.as_quat()

@@ -49,6 +49,7 @@
   <depend>rospy</depend>
   <depend>geometry_msgs</depend>
   <depend>dse_msgs</depend>
+  <depend>visualization_msgs</depend>
   <depend>gazebo_ros</depend>
   <exec_depend>gazebo</exec_depend>
 

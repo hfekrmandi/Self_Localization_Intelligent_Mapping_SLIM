@@ -20,10 +20,12 @@ roslib.load_manifest('dse_simulation')
 
 class direct_estimator:
 
+    # Define setup/initial values
     def __init__(self):
         self.results_pub = rospy.Publisher("/dse/inf/results", InfFilterResults, queue_size=10)
         self.inf_sub = rospy.Subscriber("/dse/inf/partial", InfFilterPartials, self.information_callback)
 
+    # When the information filter sends partials (prior and measurement), combine and return them
     def information_callback(self, data):
         inf_id_list = data.ids
         inf_Y = multi_array_2d_output(data.inf_matrix_prior)

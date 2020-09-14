@@ -10,6 +10,7 @@ project(dse_simulation)
 find_package(catkin REQUIRED COMPONENTS
   dse_msgs
   geometry_msgs
+  visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -106,7 +107,7 @@ catkin_package(
 #  LIBRARIES dse_simulation
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
-  CATKIN_DEPENDS dse_msgs geometry_msgs
+  CATKIN_DEPENDS dse_msgs geometry_msgs visualization_msgs
 )
 
 ###########
