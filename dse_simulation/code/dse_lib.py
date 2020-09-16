@@ -43,6 +43,26 @@ def aruco_R_from_range(range):
     return r_var
 
 
+def aruco_R_from_range_3D(range):
+    # Assuming linear error with a slope of:
+    # [x y z phi theta psi]
+    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
+    x = 10*np.transpose([0.01, 0.01, 0.01]) # Radians
+    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
+
+    # Slope values are for 3-sigma error, so dividing by 3
+    range = range * np.eye(3)
+    r_std = np.multiply(range, x)
+    r_var = np.multiply(r_std, r_std)
+    # Compute variance from standard deviation
+    return r_var
+
+
+def theta_2_rotm(theta):
+    R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+    return R
+
+
 def multi_array_2d_input(mat, multi_arr):
     multi_arr.layout.dim.append(MultiArrayDimension())
     multi_arr.layout.dim.append(MultiArrayDimension())
@@ -579,4 +599,18 @@ def dual_relative_obs_jacobian(vector_1, vector_2):
                          s2) * (np.cos(p1) * np.cos(s1) + np.sin(p1) * np.sin(s1) * np.sin(t1))) ** 2)]
 
     J = [Jx, Jy, Jz, Jp, Jt, Js]
+    return J
+
+
+def dual_relative_obs_jacobian_3D(vector_1, vector_2):
+
+    [x1, y1, t1] = vector_1
+    [x2, y2, t2] = vector_2
+
+    Jx = [-np.cos(t1), -np.sin(t1), np.sin(t1) * (x1 - x2) - np.cos(t1) * (y1 - y2), np.cos(t1), np.sin(t1), 0]
+    Jy = [np.sin(t1), -np.cos(t1), np.cos(t1) * (x1 - x2) - np.sin(t1) * (y1 - y2), -np.sin(t1), np.cos(t1), 0]
+    Jt = [0, 0, -(np.cos(t1)*np.sin(t2) - np.cos(t2)*np.sin(t1))/(1 - (np.cos(t1)*np.cos(t2) + np.sin(t1)*np.sin(t2)) ** 2) ** 0.5,
+          0, 0, (np.cos(t1)*np.sin(t2) - np.cos(t2)*np.sin(t1))/(1 - (np.cos(t1)*np.cos(t2) + np.sin(t1)*np.sin(t2)) ** 2) ** 0.5]
+
+    J = [Jx, Jy, Jt]
     return J
