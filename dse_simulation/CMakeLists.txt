@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   dse_msgs
   geometry_msgs
   visualization_msgs
+  rostest
 )
 
 ## System dependencies are found with CMake's conventions
@@ -205,3 +206,10 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+if(CATKIN_ENABLE_TESTING)
+  foreach(T
+      test/test_information_filter.launch)
+     add_rostest(${T})
+  endforeach()
+endif()

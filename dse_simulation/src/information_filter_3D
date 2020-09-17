@@ -131,7 +131,7 @@ class information_filter:
             print('aruco range error estimate: ' + str(aruco_R_from_range_3D(dist)))
             # H_0[i_low:i_high, :] = self.h_camera(x_11, obs_index, index)
             z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
-            H_0[i_low:i_high, :] = self.h_camera_good(x_11, z_0[i_low:i_high], obs_index, index)
+            H_0 = h_camera_3D(H_0, x_11, obs_index, index, self.dim_state, self.dim_obs)
 
         # if np.shape(self.z_movavg) == np.shape(z_0):
         #     self.z_movavg = z_0 * self.z_movavg_a + self.z_movavg * (self.z_movavg_a - 1)
@@ -212,39 +212,6 @@ class information_filter:
         i_low = self.dim_state * index
         i_high = i_low + self.dim_state
         return P[i_low:i_high, i_low:i_high]
-
-    # Define measurement jacobian for camera
-    def h_camera_good(self, x, z, agent1, agent2):
-        agent1_row_min = self.dim_state * agent1
-        agent1_row_max = agent1_row_min + self.dim_obs
-        agent2_row_min = self.dim_state * agent2
-        agent2_row_max = agent2_row_min + self.dim_obs
-
-        x1 = x[agent1_row_min:agent1_row_max]
-        # t1 = x1[0:2]
-        # R1 = theta_2_rotm(x1[2, 0])
-        #
-        x2 = x[agent2_row_min:agent2_row_max]
-        # t2 = x2[0:2]
-        # R2 = theta_2_rotm(x2[2, 0])
-
-        # print(z)
-        # print(R1, R2, t1, t2)
-        # zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
-        # zR = np.transpose(R1).dot(R2)
-        # zr = R.from_dcm(zR)
-        # zr = zr.as_euler(self.euler_order)
-        # z_calc = np.concatenate((zt, zr))[:, None]
-
-        n_states = np.shape(x)[0]
-        H = np.zeros((self.dim_obs, n_states))
-        # H[:, agent1_row_min:agent1_row_max] = np.multiply(np.eye(self.dim_obs), z_calc/x1)
-        Jacobian = np.array(dual_relative_obs_jacobian_3D(x1, x2))
-        H[:, agent1_row_min:agent1_row_max] = Jacobian[:, 0:3]
-        H[:, agent2_row_min:agent2_row_max] = Jacobian[:, 3:6]
-        print(H.dot(x))
-        print('\n\n')
-        return H
 
     # Define motion jacobian for unicycle robot
     def f_unicycle_2d(self, dt, x, agent1):
