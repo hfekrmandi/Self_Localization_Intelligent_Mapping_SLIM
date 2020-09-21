@@ -10,9 +10,4 @@
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
 
   <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  args="-urdf -model turtlebot3_$(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
-
-  <node pkg="dse_simulation" type="aruco_pose_estimation_3D" name="aruco_pose_estimate" output="screen"/>
-  <node pkg="dse_simulation" type="information_filter_3D" name="information_filter_node" output="screen"/>
-  <node pkg="dse_simulation" type="direct_estimator_3D" name="direct_estimator_node" output="screen"/>
-  <node pkg="dse_simulation" type="visualize_pose_3D" name="dse_visualization_node" output="screen"/>
 </launch>

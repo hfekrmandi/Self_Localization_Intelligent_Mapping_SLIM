@@ -127,7 +127,7 @@ class aruco_pose:
 
 def main(args):
     ic = aruco_pose()
-    rospy.init_node('aruco_pose_estimate', anonymous=True)
+    rospy.init_node('aruco_pose_estimation_node', anonymous=True)
     try:
         rospy.spin()
     except KeyboardInterrupt:
