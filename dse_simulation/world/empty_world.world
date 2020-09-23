@@ -16,10 +16,5 @@
 		<include>
 			<uri>model://aruco_marker</uri>
 		</include>
-		
-		<!-- A turtlebot symbol -->
-		<include>
-			<uri>model://turtlebot3_house</uri>
-		</include>
 	</world>
 </sdf>
