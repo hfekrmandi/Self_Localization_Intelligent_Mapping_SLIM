@@ -145,6 +145,7 @@ class information_filter:
 
         # Compare information filter and kalman filter outputs
         x_inf = np.linalg.inv(Y_00).dot(y_00)
+        print('measurement: ' + str(z_0))
         print('state: ' + str(x_inf))
         P_inf = np.linalg.inv(Y_00)
         P_kal = F_0.dot(np.linalg.inv(Y_11).dot((np.transpose(F_0)))) + Q_0

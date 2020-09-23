@@ -436,7 +436,6 @@ def q_distance(dt, x, agent1, dim_state):
     # Q is (dt * (x_dot + 0.001) * 5%) ^ 2
     Q_pos = (dt * (np.linalg.norm(x[i_low+3:i_low+5]) + 0.001) * 0.05) ** 2
     Q_theta = (dt * (np.linalg.norm(x[i_low+5]) + 0.001) * 0.05) ** 2
-    print('Q_pos: ' + str(Q_pos) + ' and Q_theta: ' + str(Q_theta))
 
     # Define the velocity covariance
     Q = 1 * np.eye(dim_state)
