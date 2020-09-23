@@ -1,5 +1,3 @@
-# Autonomous-GNC-MAS
-
 Installing this code - 
 Option A: Use your catkin_ws in ~/
 	Henceforth this will be referred to as simulation_ws, just keep that in mind
