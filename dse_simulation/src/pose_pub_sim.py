@@ -48,7 +48,7 @@ def main(args):
     # and then x = [x_agent_0, x_agent_1, .....]
 
     x[6] = 0.05         # 5 cm/sec forward velocity
-    x[9] = 0.05       # 0.05 rad/sec (~3 degrees/sec) rotation
+    x[9] = 0.10       # 0.05 rad/sec (~3 degrees/sec) rotation
     k = 0
 
     # Loop forever

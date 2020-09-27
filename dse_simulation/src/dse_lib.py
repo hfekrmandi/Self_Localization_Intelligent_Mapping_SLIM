@@ -70,26 +70,86 @@ def theta_2_rotm(theta):
     return R
 
 
+# Converts a quaternion into euler angles, using the euler order described in dse_constants.py
+def quat2eul(quat):
+    r = R.from_quat(quat)
+    eul = r.as_euler(dse_constants.EULER_ORDER)
+    return eul
+
+
+# Converts euler angles into a quaternion, using the euler order described in dse_constants.py
+def eul2quat(eul):
+    r = R.from_euler(dse_constants.EULER_ORDER, eul)
+    quat = r.as_quat()
+    return quat
+
+
+# Expects a quaternion in the form: orientation.x,y,z,w
+def quat_from_pose2eul(orientation):
+    quat = [0, 0, 0, 0]
+    quat[0] = orientation.x
+    quat[1] = orientation.y
+    quat[2] = orientation.z
+    quat[3] = orientation.w
+    eul = quat2eul(quat)
+    return eul
+
+
+# Expects a quaternion in the form: orientation.x,y,z,w
+def euler2quat_from_pose(orientation, euler):
+    quat = quat2eul(euler)
+    orientation.x = quat[0]
+    orientation.y = quat[1]
+    orientation.z = quat[2]
+    orientation.w = quat[3]
+    return orientation
+
+
+# Expects a pose in the form: x, y, z, w
+def state_from_pose(pose):
+    euler_orientation = quat_from_pose2eul(pose.orientation)
+    x = np.array([pose.position.x, pose.position.y, pose.position.z, euler_orientation])[:, None]
+    return x
+
+
+# Expects a pose in the form: x, y, z, w
+def state_from_pose_3D(pose):
+    euler_orientation = quat_from_pose2eul(pose.orientation)
+    x = np.array([pose.position.x, pose.position.y, euler_orientation[0]])[:, None]
+    return x
+
+
+# Expects a state in the form: x, y, z, eul_z, eul_y, eul_x
+def pose_from_state(x):
+    pose = Pose()
+    pose.position.x = x[0]
+    pose.position.y = x[1]
+    pose.position.z = x[2]
+    pose.orientation = euler2quat_from_pose(pose.orientation, x[3:6])
+    return pose
+
+
+# Expects a state in the form: x, y, eul_z
+def pose_from_state_3D(x):
+    pose = Pose()
+    pose.position.x = x[0]
+    pose.position.y = x[1]
+    pose.position.z = 0
+    pose.orientation = euler2quat_from_pose(pose.orientation, [x[2], 0, 0])
+    return pose
+
+
 # Fill and return a pose array with values from the state variable x
 def pose_array_from_state(pose_array, x, dim_state, dim_obs):
     num_objs = len(x) / dim_state
     for i in range(num_objs):
-        pose = Pose()
 
         i_low = dim_state * i
+        i_high = i_low + dim_obs
+        x_i = x[i_low:i_high]
 
-        pose.position.x = x[i_low + 0]
-        pose.position.y = x[i_low + 1]
-        pose.position.z = x[i_low + 2]
-        tmp = x[i_low+3:i_low+6, 0]
-        r = R.from_euler('zyx', x[i_low+3:i_low+6, 0])
-        quat = r.as_quat()
+        pose_array.poses.append([pose_from_state(x_i)])
 
-        pose.orientation.x = quat[0]
-        pose.orientation.y = quat[1]
-        pose.orientation.z = quat[2]
-        pose.orientation.w = quat[3]
-        pose_array.poses += [pose]
     return pose_array
 
 
@@ -117,15 +177,58 @@ def multi_array_2d_output(multi_arr):
     return mat
 
 
+# def observe_agent2_from_agent1_Hz(agent1_global, agent2_global):
+#     H = dual_relative_obs_jacobian(agent1_global, agent2_global)
+#     z = H.dot(np.concatenate(agent1_global, agent2_global))
+#     return z
+#
+#
+# def observe_agent2_from_agent1_Hz_3D(agent1_global, agent2_global):
+#     H = dual_relative_obs_jacobian_3D(agent1_global, agent2_global)
+#     z = H.dot(np.concatenate(agent1_global, agent2_global))
+#     return z
+
+
+def observe_agent2_from_agent1(agent1_global, agent2_global):
+    t1 = agent1_global[0:3]
+    r1 = R.from_euler(dse_constants.EULER_ORDER, agent1_global[3:6, 0])
+    R1 = r1.as_dcm()
+
+    t2 = agent2_global[0:3]
+    r2 = R.from_euler(dse_constants.EULER_ORDER, agent2_global[3:6, 0])
+    R2 = r2.as_dcm()
+
+    tz = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
+    Rz = np.transpose(R1).dot(R2)
+    rz = R.from_dcm(Rz)
+    rz = rz.as_euler(dse_constants.EULER_ORDER)
+    z = np.concatenate((tz, rz))[:, None]
+    return z
+
+
+def observe_agent2_from_agent1_3D(agent1_global, agent2_global):
+    t1 = agent1_global[0:2, 0]
+    R1 = theta_2_rotm(agent1_global[2, 0])
+
+    t2 = agent2_global[0:2, 0]
+    R2 = theta_2_rotm(agent2_global[2, 0])
+
+    zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))
+    zR = np.transpose(R1).dot(R2)
+    zr = [np.arccos(zR[0, 0])]
+    z = np.concatenate((zt, zr))[:, None]
+    return z
+
+
 # Compute the observation jacobian H for a 6D-obs system.
 # Currently no functions for the angles, DO NOT USE
-def dual_relative_obs_jacobian(vector_1, vector_2):
+def dual_relative_obs_jacobian(state1, state2):
 
-    [x1, y1, z1, p1, t1, s1] = vector_1
-    [x2, y2, z2, p2, t2, s2] = vector_2
+    [x1, y1, z1, p1, t1, s1] = state1
+    [x2, y2, z2, p2, t2, s2] = state2
 
     Jx = [-np.cos(s1) * np.cos(t1), -np.cos(t1) * np.sin(s1), np.sin(t1), 0, 0, 0,
-          np.cos(s1) * np.cos(t1),np.cos(t1) * np.sin(s1), -np.sin(t1), 0, 0, 0]
+          np.cos(s1) * np.cos(t1), np.cos(t1) * np.sin(s1), -np.sin(t1), 0, 0, 0]
 
     Jy = [np.cos(p1) * np.sin(s1) - np.cos(s1) * np.sin(p1) * np.sin(t1),
           - np.cos(p1) * np.cos(s1) - np.sin(p1) * np.sin(s1) * np.sin(t1), -np.cos(t1) * np.sin(p1), 0, 0, 0,
@@ -150,11 +253,13 @@ def dual_relative_obs_jacobian(vector_1, vector_2):
     return J
 
 
-# Compute the observation jacobian H for a 3D-obs system.
-def dual_relative_obs_jacobian_3D(x1, x2):
+# Compute the observation jacobian H for a 3D-observation system
+# Given two state vectors in the global coordinate system, x1 and x2
+# What is the jacobian of the local observation of x2 from x1
+def dual_relative_obs_jacobian_3D(state1, state2):
 
-    [x1, y1, t1] = x1
-    [x2, y2, t2] = x2
+    [x1, y1, t1] = state1
+    [x2, y2, t2] = state2
 
     Jx = [-np.cos(t1), -np.sin(t1), 0, np.cos(t1), np.sin(t1), 0]
     Jy = [np.sin(t1), -np.cos(t1), 0, -np.sin(t1), np.cos(t1), 0]
@@ -206,17 +311,20 @@ def fill_FQ(id_list, dt, x_11, dim_state, dim_obs):
         i_low = dim_state * i
         i_high = i_low + dim_state
 
-        # Q is a function of distance traveled in the last time step
-        Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
-
         # If we are looking at ID 0, it is a waypoint and as such doesn't move (F is identity matrix)
-        if id_list[i] == 0:
+        if id_list[i] == -1:
+            Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
             F_0[i_low:i_high, i_low:i_high] = f_eye(dim_state)
         else:
             # Else use the unicycle model
             if dim_obs == 3:
+
+                # Q is a function of distance traveled in the last time step
+                Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
             else:
+                # Q is a function of distance traveled in the last time step
+                Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
 
     return F_0, Q_0
@@ -244,7 +352,7 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
         i_low = dim_obs * i
         i_high = i_low + dim_obs
 
-        # Compute the euler angles from the quaternion paseed in
+        # Compute the euler angles from the quaternion passed in
         quat = np.zeros(4)
         quat[0] = observed_poses[i].orientation.x
         quat[1] = observed_poses[i].orientation.y
@@ -428,8 +536,8 @@ def f_eye(dim_state):
     return F
 
 
-# Define motion model covariance (distance-based)
-def q_distance(dt, x, agent1, dim_state):
+# Define motion model covariance (3D-observation, distance-based)
+def q_distance_3D(dt, x, agent1, dim_state):
     i_low = dim_state * agent1
     i_high = i_low + dim_state
 
@@ -447,6 +555,27 @@ def q_distance(dt, x, agent1, dim_state):
         Q[0:2, 0:2] = Q_pos * np.eye(2)
     if Q_theta > 0:
         Q[2, 2] = Q_theta
+    return Q
+
+
+# Define motion model covariance (distance-based)
+def q_distance(dt, x, agent1, dim_state):
+    i_low = dim_state * agent1
+    i_high = i_low + dim_state
+
+    # Q is (dt * (x_dot + 0.001) * 5%) ^ 2
+    Q_pos = (dt * (np.linalg.norm(x[i_low+6:i_low+9]) + 0.001) * 0.05) ** 2
+    Q_theta = (dt * (np.linalg.norm(x[i_low+9:i_low+12]) + 0.001) * 0.05) ** 2
+
+    # Define the velocity covariance
+    Q = 1 * np.eye(dim_state)
+    Q[6:12, 6:9] = dse_constants.MOTION_BASE_COVARIANCE / (dt ** 2) * np.eye(6)
+
+    # if Q_pos or Q_theta is <= 0, problems occur
+    if Q_pos > 0:
+        Q[0:3, 0:3] = Q_pos * np.eye(3)
+    if Q_theta > 0:
+        Q[3:6, 3:6] = Q_theta * np.eye(3)
     return Q
 
 

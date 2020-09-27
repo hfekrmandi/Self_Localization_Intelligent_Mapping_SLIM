@@ -15,8 +15,10 @@ from std_msgs.msg import MultiArrayDimension
 from dse_msgs.msg import InfFilterResults
 from visualization_msgs.msg import Marker
 from scipy.spatial.transform import Rotation as R
+from gazebo_msgs.msg import LinkStates
 
-from dse_lib import *
+import dse_lib
+import dse_constants
 
 roslib.load_manifest('dse_simulation')
 
@@ -24,9 +26,9 @@ class information_filter:
 
     # Define initial/setup values
     def __init__(self, dim_state):
-        self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
-        self.true_sub = rospy.Subscriber("/dse/pose_true", PoseMarkers, self.true_callback)
-        self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
+        self.camera_pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
+        self.link_states_sub = rospy.Subscriber("/gazebo/link_states", LinkStates, self.true_callback)
+        self.inf_results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
         self.meas_vis_pub = rospy.Publisher("/dse/vis/measurement", PoseArray, queue_size=10)
         self.true_vis_pub = rospy.Publisher("/dse/vis/true", PoseArray, queue_size=10)
         self.est_vis_pub = rospy.Publisher("/dse/vis/estimates", PoseArray, queue_size=10)
@@ -42,7 +44,7 @@ class information_filter:
         # Define static variables
         self.dt = 0.1
         self.t_last = rospy.get_time()
-        self.euler_order = 'zyx'
+        self.ref_obj_state = None
 
     # Create pose_array for measurement data
     def measurement_callback(self, data):
@@ -51,51 +53,42 @@ class information_filter:
 
     # Create pose_array for the information results
     def true_callback(self, data):
-        data.pose_array.header.frame_id = 'odom'
-        self.true_vis_pub.publish(data.pose_array)
+        n = len(data.name)
+        for i in range(n):
+            if data.name[i] == dse_constants.GAZEBO_REFERENCE_OBJECT_NAME:
+                self.ref_obj_state = dse_lib.state_from_pose_3D(data.pose[i])
+                break
 
     # Create pose_array for the information results
     def results_callback(self, data):
         inf_id_list = np.array(data.ids)
-        inf_Y = multi_array_2d_output(data.inf_matrix)
-        inf_y = multi_array_2d_output(data.inf_vector)
+        inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
+        inf_y = dse_lib.multi_array_2d_output(data.inf_vector)
         inf_x = np.linalg.inv(inf_Y).dot(inf_y)
         inf_P = np.linalg.inv(inf_Y)
 
         poses = PoseArray()
         poses.header.stamp = rospy.Time.now()
         poses.header.frame_id = 'odom'
-        for i in range(len(inf_id_list)):
-            pose = Pose()
-            i_low = self.dim_state * i
-            i_high = i_low + self.dim_obs
+        if self.ref_obj_state is not None:
+            for i in range(len(inf_id_list)):
 
-            if self.dim_obs == 3:
-                self.euler_order = 'z'
-                pose.position.x = inf_x[i_low]
-                pose.position.y = inf_x[i_low + 1]
-                pose.position.z = 0
+                i_low = self.dim_state * i
+                i_high = i_low + self.dim_obs
+                agent_i_state = inf_x[i_low:i_high]
 
-                r = R.from_euler(self.euler_order, inf_x[i_low + 2, 0])
-                quat = r.as_quat()
-            else:
-                pose.position.x = inf_x[i_low]
-                pose.position.y = inf_x[i_low + 1]
-                pose.position.z = inf_x[i_low + 2]
+                if self.dim_obs == 3:
+                    estimation = dse_lib.observe_agent2_from_agent1_3D(self.ref_obj_state, agent_i_state)
+                    poses.poses.append(dse_lib.pose_from_state_3D(estimation))
+                else:
+                    estimation = dse_lib.observe_agent2_from_agent1(self.ref_obj_state, agent_i_state)
+                    poses.poses.append(dse_lib.pose_from_state(estimation))
 
-                r = R.from_euler(self.euler_order, inf_x[i_low + 3:i_low + 6, 0])
-                quat = r.as_quat()
-
-            pose.orientation.x = quat[0]
-            pose.orientation.y = quat[1]
-            pose.orientation.z = quat[2]
-            pose.orientation.w = quat[3]
-            poses.poses.append(pose)
         self.est_vis_pub.publish(poses)
 
 
 def main(args):
-    rospy.init_node('dse_visualization_node', anonymous=True)
+    rospy.init_node('dse_gazebo_visualization_node', anonymous=True)
     il = information_filter(6)
     try:
         rospy.spin()

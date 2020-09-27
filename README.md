@@ -52,8 +52,9 @@ Node descriptions -
 	- What it does: uses the aruco library to find the pose of each tag, and publishes that pose in the robot's coordinate frame
 - information_filter_node in information_filter
 	- Inputs: Poses and IDs of all observed tags
-	- Outputs: Information filter partial and measurement (Y_01, y_01, delta_I and delta_i)
+	- Outputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- What it does: Computes a step of the information filter
+	- Reference information filter here
 - direct_estimator_node in direct_estimator
 	- Inputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- Outputs: Information filter full estimate (Y_00 and y_00)
@@ -93,3 +94,7 @@ Debugging the code -
 - By adding print statements
 	- use print() normally in any node file
 	- make sure that in the launch file for each node you have output="screen"
+
+Other files - 
+- src/dse_leb.py
+	- Library of functions for computing R, H, z, F, Q...

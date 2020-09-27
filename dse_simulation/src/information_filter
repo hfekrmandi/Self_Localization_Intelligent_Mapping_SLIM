@@ -24,7 +24,7 @@ class information_filter:
 
     # Set up initial variables
     # Pass in the ID of this agent and the state dimension (6 or 12)
-    def __init__(self, my_id, dim_state):
+    def __init__(self, this_agent_id, dim_state):
 
         # Define publishers and subscribers
         # Subscribes to control signals
@@ -46,7 +46,7 @@ class information_filter:
             rospy.signal_shutdown('invalid state dimension passed in')
 
         # Define static variables
-        self.my_id = my_id
+        self.this_agent_id = this_agent_id
         self.dt = 0.1
         self.t_last = rospy.get_time()
         self.euler_order = dse_constants.EULER_ORDER
@@ -60,19 +60,19 @@ class information_filter:
         self.inf_id_comm = []
 
         # Initialize information variables
-        self.inf_id_list = [self.my_id]
+        self.inf_id_list = [self.this_agent_id]
         self.inf_Y = dse_constants.INF_MATRIX_INITIAL * np.eye(self.dim_state, dtype=np.float64)
         self.inf_y = dse_constants.INF_VECTOR_INITIAL * \
                      np.transpose(1 * np.arange(1, self.dim_state + 1, dtype=np.float64))[:, None]
 
         # Initialize the control input arrays
-        self.ctrl_ids = [self.my_id]
+        self.ctrl_ids = [self.this_agent_id]
         self.ctrl = np.zeros((1, 6))
 
     # When control signals are sent, store them. More logic to come later for storing more than just one agent.
     def control_callback(self, data):
         id = 0
-        self.ctrl_ids[0] = self.my_id
+        self.ctrl_ids[0] = self.this_agent_id
         self.ctrl[id][0] = np.array(data.linear.x)
         self.ctrl[id][1] = np.array(data.linear.y)
         self.ctrl[id][2] = np.array(data.linear.z)
@@ -113,8 +113,8 @@ class information_filter:
         # H - Measurement Jacobian
         # z - The measurement itself
         # This function is defined in src/dse_lib.py
-        R_0, H_0, z_0 = dse_lib.fill_RHz(id_list, self.my_id, observed_ids, observed_poses, x_11,
-                                 self.euler_order, self.dim_state, self.dim_obs)
+        R_0, H_0, z_0 = dse_lib.fill_RHz(id_list, self.this_agent_id, observed_ids, observed_poses, x_11,
+                                         self.euler_order, self.dim_state, self.dim_obs)
 
         # F - Motion Jacobian
         # Q - Motion Covariance
@@ -125,6 +125,14 @@ class information_filter:
         # This function is not ready yet.
         # B_0, u_0 = dse_lib.fill_Bu(id_list, self.my_id, observed_ids, x_11, self.ctrl, self.dim_state, self.dim_obs)
 
+        y = z_0 - H_0.dot(x_11)
+        while y[2] > np.pi or y[2] < -np.pi:
+            if y[2] > np.pi:
+                z_0[2] = z_0[2] - 2 * np.pi
+            if y[2] < -np.pi:
+                z_0[2] = z_0[2] + 2 * np.pi
+            y = z_0 - H_0.dot(x_11)
+
         # Compute the information filter steps
         M_0 = np.transpose(np.linalg.inv(F_0)).dot(Y_11.dot(np.linalg.inv(F_0)))
         C_0 = M_0.dot(np.linalg.inv(M_0 + np.linalg.inv(Q_0)))
@@ -133,6 +141,7 @@ class information_filter:
         y_01 = L_0.dot(np.transpose(np.linalg.inv(F_0)).dot(y_11))  # + Y_01.dot(B_0.dot(u_0))
         Y_00 = Y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(H_0))
         y_00 = y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(z_0))
+        # Don't use z, loop up extended information filter
 
         # Compute the Kalman filter steps (For comparison and math checking)
         x_01 = F_0.dot(x_11)  # + B_0.dot(u_0)
@@ -161,7 +170,7 @@ class information_filter:
 
         # Write the consensus variables to the publisher
         inf_partial = InfFilterPartials()
-        inf_partial.sender_id = self.my_id
+        inf_partial.sender_id = self.this_agent_id
         inf_partial.ids = inf_id_list
         inf_partial.inf_matrix_prior = dse_lib.multi_array_2d_input(inf_Y, inf_partial.inf_matrix_prior)
         inf_partial.inf_vector_prior = dse_lib.multi_array_2d_input(inf_y, inf_partial.inf_vector_prior)
