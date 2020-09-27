@@ -72,7 +72,7 @@ def theta_2_rotm(theta):
 
 # Fill and return a pose array with values from the state variable x
 def pose_array_from_state(pose_array, x, dim_state, dim_obs):
-    num_objs = len(x) / dim_state
+    num_objs = int(len(x) / dim_state)
     for i in range(num_objs):
         pose = Pose()
 
