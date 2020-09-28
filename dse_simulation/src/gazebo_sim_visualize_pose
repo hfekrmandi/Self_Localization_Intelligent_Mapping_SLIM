@@ -27,10 +27,12 @@ class information_filter:
     # Define initial/setup values
     def __init__(self, dim_state):
         self.camera_pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
-        self.link_states_sub = rospy.Subscriber("/gazebo/link_states", LinkStates, self.true_callback)
+        self.link_states_sub = rospy.Subscriber("/gazebo/link_states", LinkStates, self.gzbo_true_callback)
+        self.python_true_sub = rospy.Subscriber("/dse/python_pose_true", PoseMarkers, self.pthn_true_callback)
         self.inf_results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
         self.meas_vis_pub = rospy.Publisher("/dse/vis/measurement", PoseArray, queue_size=10)
-        self.true_vis_pub = rospy.Publisher("/dse/vis/true", PoseArray, queue_size=10)
+        self.gzbo_est_vis_pub = rospy.Publisher("/dse/vis/gazebo_true", PoseArray, queue_size=10)
+        self.pthn_est_vis_pub = rospy.Publisher("/dse/vis/python_true", PoseArray, queue_size=10)
         self.est_vis_pub = rospy.Publisher("/dse/vis/estimates", PoseArray, queue_size=10)
 
         self.dim_state = dim_state
@@ -44,20 +46,90 @@ class information_filter:
         # Define static variables
         self.dt = 0.1
         self.t_last = rospy.get_time()
-        self.ref_obj_state = None
+        self.gzbo_ref_obj_state = None
+        self.pthn_ref_obj_state = None
+
+    def flip_measurement(self, x, id_list, ref_obj, poses):
+        i_low = self.dim_state * dse_constants.GAZEBO_REFERENCE_OBJECT_ID
+        i_high = i_low + self.dim_obs
+        ref_obj_est_state = x[i_low:i_high]
+
+        for i in range(len(id_list)):
+
+            i_low = self.dim_state * i
+            i_high = i_low + self.dim_obs
+            measurement = x[i_low:i_high]
+
+            if id_list[i] != dse_constants.GAZEBO_REFERENCE_OBJECT_ID:
+                if self.dim_obs == 3:
+                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1_3D(ref_obj, measurement)
+                    poses.poses.append(dse_lib.pose_from_state_3D(est_in_ref_frame))
+                else:
+                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1(ref_obj, measurement)
+                    poses.poses.append(dse_lib.pose_from_state(est_in_ref_frame))
+        return poses
 
     # Create pose_array for measurement data
     def measurement_callback(self, data):
-        data.pose_array.header.frame_id = 'odom'
-        self.meas_vis_pub.publish(data.pose_array)
+        id_list = [1]
+        poses = data.pose_array
+
+        if self.dim_obs == 3:
+            x = dse_lib.state_from_pose_array_3D(poses, self.dim_state, self.dim_obs)
+        else:
+            x = dse_lib.state_from_pose_array(poses, self.dim_state, self.dim_obs)
+
+        poses = PoseArray()
+        poses.header.stamp = rospy.Time.now()
+        poses.header.frame_id = 'odom'
+
+        if self.gzbo_ref_obj_state is not None:
+            poses = self.flip_measurement(x, id_list, self.gzbo_ref_obj_state, poses)
+        elif self.pthn_ref_obj_state is not None:
+            poses = self.flip_measurement(x, id_list, self.pthn_ref_obj_state, poses)
+
+        self.meas_vis_pub.publish(poses)
 
     # Create pose_array for the information results
-    def true_callback(self, data):
+    def gzbo_true_callback(self, data):
         n = len(data.name)
         for i in range(n):
             if data.name[i] == dse_constants.GAZEBO_REFERENCE_OBJECT_NAME:
-                self.ref_obj_state = dse_lib.state_from_pose_3D(data.pose[i])
+                self.gzbo_ref_obj_state = dse_lib.state_from_pose_3D(data.pose[i])
                 break
+
+    # Create pose_array for the information results
+    def pthn_true_callback(self, data):
+        n = len(data.ids)
+        for i in range(n):
+            if data.ids[i] == dse_constants.GAZEBO_REFERENCE_OBJECT_ID:
+                self.pthn_ref_obj_state = dse_lib.state_from_pose_3D(data.pose_array.poses[i])
+                break
+
+    def values_in_ref_frame(self, x, id_list, ref_obj, poses):
+        if self.dim_obs == 3:
+            ref_obj_est_state = dse_lib.state_from_id(x, id_list, dse_constants.GAZEBO_REFERENCE_OBJECT_ID, 6)
+            ref_obj_est_state = ref_obj_est_state[0:3]
+        else:
+            ref_obj_est_state = dse_lib.state_from_id(x, id_list, dse_constants.GAZEBO_REFERENCE_OBJECT_ID, 12)
+            ref_obj_est_state = ref_obj_est_state[0:6]
+
+        for i in range(len(id_list)):
+
+            i_low = self.dim_state * i
+            i_high = i_low + self.dim_obs
+            agent_i_state = x[i_low:i_high]
+
+            if id_list[i] != dse_constants.GAZEBO_REFERENCE_OBJECT_ID:
+                if self.dim_obs == 3:
+                    estimation = dse_lib.agent2_in_frame_agent1_3D(ref_obj_est_state, agent_i_state)
+                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1_3D(ref_obj, estimation)
+                    poses.poses.append(dse_lib.pose_from_state_3D(est_in_ref_frame))
+                else:
+                    estimation = dse_lib.agent2_in_frame_agent1(ref_obj_est_state, agent_i_state)
+                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1(ref_obj, estimation)
+                    poses.poses.append(dse_lib.pose_from_state(est_in_ref_frame))
+        return poses
 
     # Create pose_array for the information results
     def results_callback(self, data):
@@ -70,19 +142,13 @@ class information_filter:
         poses = PoseArray()
         poses.header.stamp = rospy.Time.now()
         poses.header.frame_id = 'odom'
-        if self.ref_obj_state is not None:
-            for i in range(len(inf_id_list)):
 
-                i_low = self.dim_state * i
-                i_high = i_low + self.dim_obs
-                agent_i_state = inf_x[i_low:i_high]
+        #x = dse_lib.state_12D_to_6D(inf_x)
 
-                if self.dim_obs == 3:
-                    estimation = dse_lib.observe_agent2_from_agent1_3D(self.ref_obj_state, agent_i_state)
-                    poses.poses.append(dse_lib.pose_from_state_3D(estimation))
-                else:
-                    estimation = dse_lib.observe_agent2_from_agent1(self.ref_obj_state, agent_i_state)
-                    poses.poses.append(dse_lib.pose_from_state(estimation))
+        if self.gzbo_ref_obj_state is not None:
+            poses = self.values_in_ref_frame(inf_x, inf_id_list, self.gzbo_ref_obj_state, poses)
+        elif self.pthn_ref_obj_state is not None:
+            poses = self.values_in_ref_frame(inf_x, inf_id_list, self.pthn_ref_obj_state, poses)
 
         self.est_vis_pub.publish(poses)
 

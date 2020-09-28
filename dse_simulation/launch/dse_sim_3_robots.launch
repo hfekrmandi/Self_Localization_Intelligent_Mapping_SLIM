@@ -15,5 +15,5 @@
   <node pkg="dse_simulation" type="information_filter" name="information_filter_node" output="screen"/>
   <node pkg="dse_simulation" type="direct_estimator" name="direct_estimator_node" output="screen"/>
   <node pkg="dse_simulation" type="rqt_plot_output.py" name="dse_plotting_node" output="screen"/>
-  <node pkg="dse_simulation" type="visualize_pose" name="dse_visualization_node" output="screen"/>
+  <node pkg="dse_simulation" type="gazebo_sim_visualize_pose" name="dse_gazebo_visualization_node" output="screen"/>
 </launch>
