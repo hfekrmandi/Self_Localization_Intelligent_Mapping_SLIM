@@ -19,8 +19,8 @@ from gazebo_msgs.msg import LinkStates
 
 import dse_lib
 import dse_constants
-
 roslib.load_manifest('dse_simulation')
+
 
 class information_filter:
 
@@ -33,6 +33,7 @@ class information_filter:
         self.meas_vis_pub = rospy.Publisher("/dse/vis/measurement", PoseArray, queue_size=10)
         self.gzbo_est_vis_pub = rospy.Publisher("/dse/vis/gazebo_true", PoseArray, queue_size=10)
         self.pthn_est_vis_pub = rospy.Publisher("/dse/vis/python_true", PoseArray, queue_size=10)
+        self.origin_vis_pub = rospy.Publisher("/dse/vis/origin", PoseArray, queue_size=10)
         self.est_vis_pub = rospy.Publisher("/dse/vis/estimates", PoseArray, queue_size=10)
 
         self.dim_state = dim_state
@@ -62,10 +63,10 @@ class information_filter:
 
             if id_list[i] != dse_constants.GAZEBO_REFERENCE_OBJECT_ID:
                 if self.dim_obs == 3:
-                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1_3D(ref_obj, measurement)
+                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1_3D(measurement, ref_obj)
                     poses.poses.append(dse_lib.pose_from_state_3D(est_in_ref_frame))
                 else:
-                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1(ref_obj, measurement)
+                    est_in_ref_frame = dse_lib.agent2_to_frame_agent1(measurement, ref_obj)
                     poses.poses.append(dse_lib.pose_from_state(est_in_ref_frame))
         return poses
 
@@ -74,10 +75,8 @@ class information_filter:
         id_list = [1]
         poses = data.pose_array
 
-        if self.dim_obs == 3:
-            x = dse_lib.state_from_pose_array_3D(poses, self.dim_state, self.dim_obs)
-        else:
-            x = dse_lib.state_from_pose_array(poses, self.dim_state, self.dim_obs)
+        x = dse_lib.state_from_pose_array(poses, self.dim_state, self.dim_obs)
+        print('measurement: ' + str(x))
 
         poses = PoseArray()
         poses.header.stamp = rospy.Time.now()
@@ -89,6 +88,13 @@ class information_filter:
             poses = self.flip_measurement(x, id_list, self.pthn_ref_obj_state, poses)
 
         self.meas_vis_pub.publish(poses)
+
+        poses = PoseArray()
+        poses.header.stamp = rospy.Time.now()
+        poses.header.frame_id = 'odom'
+        self.origin_state = np.zeros((self.dim_state, 1))
+        poses = dse_lib.pose_array_from_state(poses, self.origin_state, self.dim_state, self.dim_obs)
+        self.origin_vis_pub.publish(poses)
 
     # Create pose_array for the information results
     def gzbo_true_callback(self, data):
@@ -122,11 +128,11 @@ class information_filter:
 
             if id_list[i] != dse_constants.GAZEBO_REFERENCE_OBJECT_ID:
                 if self.dim_obs == 3:
-                    estimation = dse_lib.agent2_in_frame_agent1_3D(ref_obj_est_state, agent_i_state)
+                    estimation = dse_lib.agent2_to_frame_agent1_3D(ref_obj_est_state, agent_i_state)
                     est_in_ref_frame = dse_lib.agent2_to_frame_agent1_3D(ref_obj, estimation)
                     poses.poses.append(dse_lib.pose_from_state_3D(est_in_ref_frame))
                 else:
-                    estimation = dse_lib.agent2_in_frame_agent1(ref_obj_est_state, agent_i_state)
+                    estimation = dse_lib.agent2_to_frame_agent1(ref_obj_est_state, agent_i_state)
                     est_in_ref_frame = dse_lib.agent2_to_frame_agent1(ref_obj, estimation)
                     poses.poses.append(dse_lib.pose_from_state(est_in_ref_frame))
         return poses
@@ -139,11 +145,11 @@ class information_filter:
         inf_x = np.linalg.inv(inf_Y).dot(inf_y)
         inf_P = np.linalg.inv(inf_Y)
 
+        print('estimations: ' + str(inf_x))
+
         poses = PoseArray()
         poses.header.stamp = rospy.Time.now()
         poses.header.frame_id = 'odom'
-
-        #x = dse_lib.state_12D_to_6D(inf_x)
 
         if self.gzbo_ref_obj_state is not None:
             poses = self.values_in_ref_frame(inf_x, inf_id_list, self.gzbo_ref_obj_state, poses)
@@ -152,10 +158,17 @@ class information_filter:
 
         self.est_vis_pub.publish(poses)
 
+        poses = PoseArray()
+        poses.header.stamp = rospy.Time.now()
+        poses.header.frame_id = 'odom'
+        self.origin_state = np.zeros((self.dim_state, 1))
+        poses = dse_lib.pose_array_from_state(poses, self.origin_state, self.dim_state, self.dim_obs)
+        self.origin_vis_pub.publish(poses)
+
 
 def main(args):
     rospy.init_node('dse_gazebo_visualization_node', anonymous=True)
-    il = information_filter(6)
+    imf = information_filter(6)
     try:
         rospy.spin()
     except KeyboardInterrupt:

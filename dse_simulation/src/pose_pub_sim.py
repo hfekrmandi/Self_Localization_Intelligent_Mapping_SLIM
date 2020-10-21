@@ -28,7 +28,7 @@ def main(args):
     # Publisher for measurements
     pose_pub = rospy.Publisher("/dse/pose_markers", PoseMarkers, queue_size=10)
     # Publisher for true values
-    true_pub = rospy.Publisher("/dse/pose_true", PoseMarkers, queue_size=10)
+    true_pub = rospy.Publisher("/dse/python_pose_true", PoseMarkers, queue_size=10)
 
     # Define constants
     dt = 1.0 / rate
@@ -74,8 +74,8 @@ def main(args):
         true_pub.publish(true_pose)
 
         # Compute the measurement
-        agent1 = 0
-        agent2 = 1
+        agent1 = 1
+        agent2 = 0
         agent1_row_min = dim_state * agent1
         agent1_row_max = agent1_row_min + dim_obs
         agent2_row_min = dim_state * agent2

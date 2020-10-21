@@ -120,7 +120,6 @@ def state_12D_to_6D(x_12D):
     return x_6D
 
 
-
 # Expects a pose in the form: x, y, z, w
 def state_from_pose(pose):
     euler_orientation = quat_from_pose2eul(pose.orientation)
@@ -165,21 +164,10 @@ def pose_array_from_state(pose_array, x, dim_state, dim_obs):
         i_high = i_low + dim_obs
         x_i = x[i_low:i_high]
 
-        pose_array.poses.append(pose_from_state(x_i))
-
-    return pose_array
-
-
-# Fill and return a pose array with values from the state variable x
-def pose_array_from_state_3D(pose_array, x, dim_state, dim_obs):
-    num_objs = int(len(x) / dim_state)
-    for i in range(num_objs):
-
-        i_low = dim_state * i
-        i_high = i_low + dim_obs
-        x_i = x[i_low:i_high]
-
-        pose_array.poses.append([pose_from_state_3D(x_i)])
+        if dim_state == 6:
+            pose_array.poses.append(pose_from_state_3D(x_i))
+        else:
+            pose_array.poses.append(pose_from_state(x_i))
 
     return pose_array
 
@@ -194,23 +182,64 @@ def state_from_pose_array(pose_array, dim_state, dim_obs):
         i_low = dim_state * i
         i_high = i_low + dim_obs
 
-        x[i_low:i_high] = state_from_pose(pose_array.poses[i])
+        if dim_state == 6:
+            x[i_low:i_high] = state_from_pose_3D(pose_array.poses[i])
+        else:
+            x[i_low:i_high] = state_from_pose(pose_array.poses[i])
 
     return x
 
 
-# Fill and return a pose array with values from the state variable x
-def state_from_pose_array_3D(pose_array, dim_state, dim_obs):
-    num_objs = np.shape(pose_array.poses)[0]
-    x = np.zeros((num_objs * dim_state, 1))
+# Expects a pose in the form: x, y, z, w
+def measurement_from_pose(pose):
+    euler_orientation = quat_from_pose2eul(pose.orientation)
+    x = np.array([pose.position.x, pose.position.y, pose.position.z, euler_orientation])[:, None]
+    return x
 
+
+# Expects a pose in the form: x, y, z, w
+def measurement_from_pose_3D(pose):
+    euler_orientation = quat_from_pose2eul(pose.orientation)
+    x = np.array([pose.position.x, pose.position.y, euler_orientation[0]])[:, None]
+    return x
+
+
+# Expects a state in the form: x, y, z, eul_z, eul_y, eul_x
+def pose_from_measurement(x):
+    pose = Pose()
+    pose.position.x = x[0, 0]
+    pose.position.y = x[1, 0]
+    pose.position.z = x[2, 0]
+    pose.orientation = euler2quat_from_pose(pose.orientation, x[3:6])
+    return pose
+
+
+# Expects a state in the form: x, y, eul_z
+def pose_from_measurement_3D(x):
+    pose = Pose()
+    pose.position.x = x[0, 0]
+    pose.position.y = x[1, 0]
+    pose.position.z = 0
+    euler_angles = np.array([x[2, 0], 0, 0])[:, None]
+    pose.orientation = euler2quat_from_pose(pose.orientation, euler_angles)
+    return pose
+
+
+# Fill and return a pose array with values from the measurement z
+def pose_array_from_measurement(pose_array, z, dim_obs):
+    num_objs = int(len(z) / dim_obs)
     for i in range(num_objs):
-        i_low = dim_state * i
+
+        i_low = dim_obs * i
         i_high = i_low + dim_obs
+        x_i = z[i_low:i_high]
 
-        x[i_low:i_high] = state_from_pose_3D(pose_array.poses[i])
+        if dim_obs == 3:
+            pose_array.poses.append(pose_from_measurement_3D(x_i))
+        else:
+            pose_array.poses.append(pose_from_measurement(x_i))
 
-    return x
+    return pose_array
 
 
 # Fill in a multi-array ROS message type with a 2D input array
@@ -249,7 +278,7 @@ def multi_array_2d_output(multi_arr):
 #     return z
 
 
-def agent2_in_frame_agent1(agent1_global, agent2_global):
+def agent2_to_frame_agent1(agent1_global, agent2_global):
     t1 = agent1_global[0:3]
     r1 = R.from_euler(dse_constants.EULER_ORDER, agent1_global[3:6, 0])
     R1 = r1.as_dcm()
@@ -266,27 +295,27 @@ def agent2_in_frame_agent1(agent1_global, agent2_global):
     return z
 
 
-def agent2_in_frame_agent1_3D(agent1_global, agent2_global):
+def agent2_to_frame_agent1_3D(agent1_global, agent2_global):
     t1 = agent1_global[0:2, 0]
     R1 = theta_2_rotm(agent1_global[2, 0])
 
     t2 = agent2_global[0:2, 0]
     R2 = theta_2_rotm(agent2_global[2, 0])
 
-    zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))
+    zt = np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1)
     zR = np.transpose(R1).dot(R2)
-    zr = [np.arccos(zR[0, 0])]
+    zr = [-np.arctan2(zR[0, 1], zR[0, 0])]
     z = np.concatenate((zt, zr))[:, None]
     return z
 
 
-def agent2_to_frame_agent1(agent1_global, agent2_global):
-    t1 = agent1_global[0:3]
-    r1 = R.from_euler(dse_constants.EULER_ORDER, agent1_global[3:6, 0])
+def agent2_from_frame_agent1(agent1_in_agent2, agent2_global):
+    t1 = agent2_global[0:3]
+    r1 = R.from_euler(dse_constants.EULER_ORDER, agent2_global[3:6, 0])
     R1 = r1.as_dcm()
 
-    t2 = agent2_global[0:3]
-    r2 = R.from_euler(dse_constants.EULER_ORDER, agent2_global[3:6, 0])
+    t2 = agent1_in_agent2[0:3]
+    r2 = R.from_euler(dse_constants.EULER_ORDER, agent1_in_agent2[3:6, 0])
     R2 = r2.as_dcm()
 
     tz = (R1.dot(t2) + t1)[:, 0]
@@ -297,16 +326,16 @@ def agent2_to_frame_agent1(agent1_global, agent2_global):
     return z
 
 
-def agent2_to_frame_agent1_3D(agent1_global, agent2_global):
-    t1 = agent1_global[0:2, 0]
-    R1 = theta_2_rotm(agent1_global[2, 0])
+def agent2_from_frame_agent1_3D(agent2_global, agent1_in_agent2):
+    t1 = agent2_global[0:2, 0]
+    R1 = theta_2_rotm(agent2_global[2, 0])
 
-    t2 = agent2_global[0:2, 0]
-    R2 = theta_2_rotm(agent2_global[2, 0])
+    t2 = agent1_in_agent2[0:2, 0]
+    R2 = theta_2_rotm(agent1_in_agent2[2, 0])
 
     tz = (R1.dot(t2) + t1)
     Rz = R1.dot(R2)
-    rz = [np.arccos(Rz[0, 0])]
+    rz = [np.arctan2(Rz[0, 1], Rz[0, 0])]
     z = np.concatenate((tz, rz))[:, None]
     return z
 

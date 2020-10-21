@@ -46,6 +46,7 @@ def main(args):
 
     # Define state as zeros
     x = np.zeros((n_agents * dim_state, 1))
+    true_id_list = [1, 0]
 
     # For testing,
     # # = [0, 1, 2, 3,     4,     5,     6,     7,     8,     9,         10,        11       ]
@@ -91,18 +92,16 @@ def main(args):
 
         # Publish the true pose for each agent
         true_pose = PoseMarkers()
-        true_pose.ids = [1, 0]
+        true_pose.ids = true_id_list
         true_pose.pose_array = dse_lib.pose_array_from_state(true_pose.pose_array, x, dim_state, dim_obs)
         true_pose.pose_array.header.stamp = rospy.Time.now()
         true_pose.pose_array.header.frame_id = 'dse'
         true_pub.publish(true_pose)
 
         # Compute the measurement
-        agent1 = 1
-        agent2 = 0
-        agent1_row_min = dim_state * agent1
+        agent1_row_min = dim_state * 0
         agent1_row_max = agent1_row_min + dim_obs
-        agent2_row_min = dim_state * agent2
+        agent2_row_min = dim_state * 1
         agent2_row_max = agent2_row_min + dim_obs
 
         x1 = x[agent1_row_min:agent1_row_max]
@@ -124,7 +123,7 @@ def main(args):
         # Publish the measurement
         marker_pose = PoseMarkers()
         marker_pose.ids = [0]
-        marker_pose.pose_array = dse_lib.pose_array_from_state(marker_pose.pose_array, z_true, dim_obs, dim_obs)
+        marker_pose.pose_array = dse_lib.pose_array_from_measurement(marker_pose.pose_array, z_true, dim_obs)
         marker_pose.pose_array.header.stamp = rospy.Time.now()
         marker_pose.pose_array.header.frame_id = 'dse'
         pose_pub.publish(marker_pose)

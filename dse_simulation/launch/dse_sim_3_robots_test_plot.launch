@@ -1,5 +1,5 @@
 <launch>
   <node pkg="dse_simulation" type="inf_est_pub_sim.py" name="inf_est_pub_sim_node" output="screen"/>
-  <!--<node pkg="dse_simulation" type="rqt_plot_output.py" name="dse_plotting_node" output="screen"/>-->
+  <node pkg="dse_simulation" type="rqt_plot_output.py" name="dse_plotting_node" output="screen"/>
   <!--<node pkg="dse_simulation" type="gazebo_sim_visualize_pose" name="dse_gazebo_visualization_node" output="screen"/>-->
 </launch>
