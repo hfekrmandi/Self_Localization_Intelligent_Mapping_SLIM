@@ -23,7 +23,7 @@ class aruco_pose:
 
     def __init__(self):
         # side length of tag in meters
-        self.markerLength = 0.1
+        self.markerLength = 0.07628*3
         # import saved calibration information
         # calibrationSave.p should be correct for laptop webcam
         cal = pickle.load(open(os.path.join(sys.path[0], "calibrationSave_2.p"), "rb"))

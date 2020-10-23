@@ -44,6 +44,16 @@ Other launch files:
 - dse_sim_3_robots_test_plot.launch - Instead of running a gazebo, this file uses a simulation node to create pose estimates for a robot, useful for testing/debugging.
 - dse_sim_3_robots_world_only.launch - Launches the gazebo world and robot, but no other nodes. Useful for testing/debugging individual nodes. 
 
+Visualizing in RVIZ
+- Run the launch file dse_sim_3_robots.launch
+	- This file runs the gazebo base_link true/estimate publisher node. 
+	- In a terminal, source ~/simulation_ws/devel/setup.bash
+	- Run the command roslaunch turtlebot3_gazebo turtlebot3_gazebo_rviz.launch
+	- On the left side, under Displays -> Global Options, change the frame from odom to base_link
+		- base_link is the robot's reference frame, so everything will be displayed in reference to it
+	- Then in the bottom left click Add -> By Topic -> /dse/vis/[estimates or gazebo_true] whatever you want to look at. 
+	- You can also go into each PoseArray and change the color so the pose arrows are individually identifiable
+		- It's recommended to change the true pose to green
 
 Node descriptions - 
 - aruco_pose_estimation_node in aruco_pose_estimation

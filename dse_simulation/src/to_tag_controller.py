@@ -67,15 +67,17 @@ class to_tag_controller:
         self.euler_order = dse_constants.EULER_ORDER
 
         # Define controller parameters
-        self.V_nominal = 0.1 * self.dt      # meters per second (per time step)
-        self.V_theta_max = 0.5 * self.dt    # radians per second (per time step)
-        self.P = 0.5 * self.dt              # each second, cut the angle error in half (per time step)
+        self.V_nominal = 0.5 * self.dt          # meters per second (per time step)
+        self.V_theta_max = 5 * self.V_nominal   # radians per second (per time step)
+        self.P = 0.5 * self.dt                  # each second, cut the angle error in half (per time step)
 
     # When the direct estimator or consensus returns the combined information variables
     def inf_callback(self, data):
-        self.inf_id_list = np.array(data.ids)
-        self.inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
-        self.inf_y = dse_lib.multi_array_2d_output(data.inf_vector)
+        inf_id_list = np.array(data.ids)
+        inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
+        inf_y = dse_lib.multi_array_2d_output(data.inf_vector)
+        inf_x = np.linalg.inv(inf_Y).dot(inf_y)
+        inf_P = np.linalg.inv(inf_Y)
 
         # information filter sub
         #   create state vector and ID vector from input
@@ -89,28 +91,47 @@ class to_tag_controller:
         #       cap v_theta at max turn speed value
 
         # information filter sub
-        # create state vector and ID vector from input
-        local_ids = self.inf_id_list[np.where(self.inf_id_list != self.this_agent_id)]
 
-        # Grab the agent's state
-        this_agent_index = np.where(self.inf_id_list == self.this_agent_id)[0][0]
-        this_agent_state = self.inf_y[this_agent_index : (this_agent_index + self.dim_state)]
-        indices = np.ones(np.shape(self.inf_y)[0], dtype=bool)
-        tmp = np.zeros((self.dim_state))
-        indices[this_agent_index : (this_agent_index + self.dim_state)] = np.zeros((self.dim_state))
-        other_states = self.inf_y[indices, 0]
+        local_ids, local_states = dse_lib.relative_states_from_global_3D(1, inf_id_list, inf_x, self.dim_state, self.dim_obs)
 
-        # for each other state
+        # # create state vector and ID vector from input
+        # local_ids = self.inf_id_list[np.where(self.inf_id_list != self.this_agent_id)]
+        #
+        # # Grab the agent's state
+        # this_agent_index = np.where(self.inf_id_list == self.this_agent_id)[0][0]
+        # this_agent_state = self.inf_y[this_agent_index : (this_agent_index + self.dim_state)]
+        # indices = np.ones(np.shape(self.inf_y)[0], dtype=bool)
+        # tmp = np.zeros((self.dim_state))
+        # indices[this_agent_index : (this_agent_index + self.dim_state)] = np.zeros((self.dim_state))
+        # other_states = self.inf_y[indices, 0]
+        # # for each other state
+        # for id in local_ids:
+        #     # transform it into the agent's frame
+        #     tmp = 0
 
-        # transform it into the agent's frame
         # Pick a target to follow
+        target_id = local_ids[0]
+        target_state = local_states[0:self.dim_state]
+        theta_error = np.arctan2(target_state[1], target_state[0])
+
         # Apply controller
         # V = constant velocity
-        # v_theta = P * theta_error
-        # cap v_theta at max turn speed value
+        velocity = self.V_nominal
 
-        local_ids = self.inf_id_list[np.where(self.inf_id_list != self.this_agent_id)]
-        local_states = dse_lib.relative_state_from_globals()
+        # v_theta = P * theta_error
+        theta_velocity = self.P * theta_error
+
+        # cap v_theta at max turn speed value
+        if theta_velocity > self.V_theta_max:
+            theta_velocity = self.V_theta_max
+        elif theta_velocity < -self.V_theta_max:
+            theta_velocity = -self.V_theta_max
+
+        # Publish control message
+        control = Twist()
+        control.linear.x = velocity
+        control.angular.z = theta_velocity
+        self.control_pub.publish(control)
 
     # When the camera sends a measurement
     def measurement_callback(self, data):

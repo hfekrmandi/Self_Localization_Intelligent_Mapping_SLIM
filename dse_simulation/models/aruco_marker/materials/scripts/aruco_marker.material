@@ -7,7 +7,7 @@ material aruco_marker/Diffuse
     {
       texture_unit
       {
-        texture aruco_marker_0_border.jpeg
+        texture aruco_marker_0_border_100.jpeg
       }
     }
   }

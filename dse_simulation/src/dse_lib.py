@@ -340,6 +340,27 @@ def agent2_from_frame_agent1_3D(agent2_global, agent1_in_agent2):
     return z
 
 
+def relative_states_from_global_3D(rel_id, ids, states, dim_state, dim_obs):
+    rel_index = np.where(ids == rel_id)[0][0]
+    obj_ids = ids[np.where(ids != rel_id)]
+
+    rel_state = states[rel_index: (rel_index + dim_state)]
+    indices = np.ones(np.shape(states)[0], dtype=bool)
+    indices[rel_index: (rel_index + dim_state)] = np.zeros((dim_state))
+    obj_states = states[indices, :]
+
+    transformed_states = np.zeros(np.shape(obj_states))
+    for i in range(len(obj_ids)):
+        min_index = i * dim_state
+        max_index = min_index + dim_obs
+
+        obj_state = obj_states[min_index:max_index]
+        transformed_state = agent2_to_frame_agent1_3D(rel_state[0:dim_obs, :], obj_state)
+        transformed_states[min_index:max_index] = transformed_state
+
+    return obj_ids, transformed_states
+
+
 # Compute the observation jacobian H for a 6D-obs system.
 # Currently no functions for the angles, DO NOT USE
 def dual_relative_obs_jacobian(state1, state2):
