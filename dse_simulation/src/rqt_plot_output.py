@@ -30,7 +30,7 @@ roslib.load_manifest('dse_simulation')
 class information_filter:
 
     # Define initial/setup values
-    def __init__(self, my_id, dim_state):
+    def __init__(self, this_agent_id, dim_state):
         self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
         self.true_sub = rospy.Subscriber("/dse/pose_true", PoseMarkers, self.true_callback)
         self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
@@ -49,7 +49,7 @@ class information_filter:
             rospy.signal_shutdown('invalid state dimension passed in')
 
         # Define static variables
-        self.my_id = my_id
+        self.this_agent_id = this_agent_id
 
     # Publish the measurement pose
     def measurement_callback(self, data):
@@ -62,7 +62,7 @@ class information_filter:
 
             # I the ID is this agent's, publish that data under robot_pub. Otherwise, use tag_pub
             id = data.ids[i]
-            if id == self.my_id:
+            if id == self.this_agent_id:
                 self.true_robot_pub.publish(data.pose_array.poses[i])
             else:
                 self.true_tag_pub.publish(data.pose_array.poses[i])
@@ -105,7 +105,7 @@ class information_filter:
             pose.orientation.w = quat[3]
 
             # If the ID is this agent's, publish that data under robot_pub. Otherwise, use tag_pub
-            if inf_id_list[i] == self.my_id:
+            if inf_id_list[i] == self.this_agent_id:
                 self.est_robot_pub.publish(pose)
             else:
                 self.est_tag_pub.publish(pose)

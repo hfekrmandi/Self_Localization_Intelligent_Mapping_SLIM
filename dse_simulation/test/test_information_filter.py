@@ -116,6 +116,97 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         x_true = np.transpose([0, np.sqrt(2)])
         self.assertEqual(True, np.allclose(x_true, x_rotm))
 
+    def test_to_frame_1(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+        agent1_global = np.array([[0], [0], [np.pi]])
+        agent2_global = np.array([[1], [0], [0]])
+        agent2_in_frame_agent1_true = np.array([[-1], [0], [np.pi]])
+        agent1_in_frame_agent2_true = np.array([[-1], [0], [np.pi]])
+
+        agent2_in_frame_agent1_est = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent1_in_frame_agent2_est = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+
+        if agent2_in_frame_agent1_est[2, 0] < 0:
+            agent2_in_frame_agent1_est[2, 0] += 2*np.pi
+        if agent1_in_frame_agent2_est[2, 0] < 0:
+            agent1_in_frame_agent2_est[2, 0] += 2*np.pi
+
+        self.assertEqual(True, np.allclose(agent2_in_frame_agent1_true, agent2_in_frame_agent1_est))
+        self.assertEqual(True, np.allclose(agent1_in_frame_agent2_true, agent1_in_frame_agent2_est))
+
+    def test_to_frame_2(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+        agent1_global = np.array([[0], [0], [0]])
+        agent2_global = np.array([[-1], [1], [0]])
+        agent2_in_frame_agent1_true = np.array([[-1], [1], [0]])
+        agent1_in_frame_agent2_true = np.array([[1], [-1], [0]])
+
+        agent2_in_frame_agent1_est = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent1_in_frame_agent2_est = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+
+        if agent2_in_frame_agent1_est[2, 0] < 0:
+            agent2_in_frame_agent1_est[2, 0] += 2*np.pi
+        if agent1_in_frame_agent2_est[2, 0] < 0:
+            agent1_in_frame_agent2_est[2, 0] += 2*np.pi
+
+        self.assertEqual(True, np.allclose(agent2_in_frame_agent1_true, agent2_in_frame_agent1_est))
+        self.assertEqual(True, np.allclose(agent1_in_frame_agent2_true, agent1_in_frame_agent2_est))
+
+    def test_to_frame_3(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+        agent1_global = np.array([[0], [0], [np.pi]])
+        agent2_global = np.array([[1], [0], [np.pi/2]])
+        agent2_in_frame_agent1_true = np.array([[-1], [0], [3*np.pi/2]])
+        agent1_in_frame_agent2_true = np.array([[0], [1], [np.pi/2]])
+
+        agent2_in_frame_agent1_est = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent1_in_frame_agent2_est = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+
+        if agent2_in_frame_agent1_est[2, 0] < 0:
+            agent2_in_frame_agent1_est[2, 0] += 2*np.pi
+        if agent1_in_frame_agent2_est[2, 0] < 0:
+            agent1_in_frame_agent2_est[2, 0] += 2*np.pi
+
+        self.assertEqual(True, np.allclose(agent2_in_frame_agent1_true, agent2_in_frame_agent1_est))
+        self.assertEqual(True, np.allclose(agent1_in_frame_agent2_true, agent1_in_frame_agent2_est))
+
+    def test_to_frame_4(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+        agent1_global = np.array([[1], [1], [7/4.0*np.pi]])
+        agent2_global = np.array([[0.4], [-0.6], [5/4.0*np.pi]])
+        agent2_in_frame_agent1_true = np.array([[0.5*np.sqrt(2)], [-1.1*np.sqrt(2)], [3/2.0*np.pi]])
+        agent1_in_frame_agent2_true = np.array([[-1.1*np.sqrt(2)], [-0.5*np.sqrt(2)], [1/2.0*np.pi]])
+
+        agent2_in_frame_agent1_est = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent1_in_frame_agent2_est = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+
+        if agent2_in_frame_agent1_est[2, 0] < 0:
+            agent2_in_frame_agent1_est[2, 0] += 2*np.pi
+        if agent1_in_frame_agent2_est[2, 0] < 0:
+            agent1_in_frame_agent2_est[2, 0] += 2*np.pi
+
+        self.assertEqual(True, np.allclose(agent2_in_frame_agent1_true, agent2_in_frame_agent1_est))
+        self.assertEqual(True, np.allclose(agent1_in_frame_agent2_true, agent1_in_frame_agent2_est))
+
+    def test_from_to_from_frame_1(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+        agent1_global = np.array([[0.5], [-7], [2.587394]])
+        agent2_global = np.array([[-6], [-1.42], [5.234]])
+
+        agent2_in_frame_agent1_est = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent1_in_frame_agent2_est = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+
+        agent1_global_est = dse_lib.agent2_from_frame_agent1_3D(agent2_global, agent1_in_frame_agent2_est)
+        agent2_global_est = dse_lib.agent2_from_frame_agent1_3D(agent1_global, agent2_in_frame_agent1_est)
+
+        self.assertEqual(True, np.allclose(agent1_global, agent1_global_est))
+        self.assertEqual(True, np.allclose(agent2_global, agent2_global_est))
+
     def test_observation_jacobian_zeros(self):
         ##############################################################################
         rospy.loginfo("-D- test_observation_jacobian_0")

@@ -28,7 +28,7 @@ def main(args):
     # Publisher for measurements
     pose_pub = rospy.Publisher("/dse/pose_markers", PoseMarkers, queue_size=10)
     # Publisher for true values
-    true_pub = rospy.Publisher("/dse/pose_true", PoseMarkers, queue_size=10)
+    true_pub = rospy.Publisher("/dse/python_pose_true", PoseMarkers, queue_size=10)
 
     # Define constants
     dt = 1.0 / rate
@@ -48,7 +48,7 @@ def main(args):
     # and then x = [x_agent_0, x_agent_1, .....]
 
     x[6] = 0.05         # 5 cm/sec forward velocity
-    x[9] = 0.05       # 0.05 rad/sec (~3 degrees/sec) rotation
+    x[9] = 0.10       # 0.05 rad/sec (~3 degrees/sec) rotation
     k = 0
 
     # Loop forever
@@ -74,8 +74,8 @@ def main(args):
         true_pub.publish(true_pose)
 
         # Compute the measurement
-        agent1 = 0
-        agent2 = 1
+        agent1 = 1
+        agent2 = 0
         agent1_row_min = dim_state * agent1
         agent1_row_max = agent1_row_min + dim_obs
         agent2_row_min = dim_state * agent2

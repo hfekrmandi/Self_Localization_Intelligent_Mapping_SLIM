@@ -23,7 +23,7 @@ roslib.load_manifest('dse_simulation')
 class information_filter:
 
     # Define initial/setup values
-    def __init__(self, my_id, dim_state):
+    def __init__(self, dim_state):
         self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
         self.true_sub = rospy.Subscriber("/dse/pose_true", PoseMarkers, self.true_callback)
         self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
@@ -96,7 +96,7 @@ class information_filter:
 
 def main(args):
     rospy.init_node('dse_visualization_node', anonymous=True)
-    il = information_filter(1, 6)
+    il = information_filter(6)
     try:
         rospy.spin()
     except KeyboardInterrupt:

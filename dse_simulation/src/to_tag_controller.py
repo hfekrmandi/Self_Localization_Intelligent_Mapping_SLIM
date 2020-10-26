@@ -20,21 +20,36 @@ import dse_constants
 roslib.load_manifest('dse_simulation')
 
 
-class information_filter:
+# pseudocode:
+# Declare pub/sub
+#
+
+# information filter sub
+#   create state vector and ID vector from input
+#       Grab the agent's state
+#       for each other state
+#           transform it into the agent's frame
+#   Pick a target to follow
+#   Apply controller
+#       V = constant velocity
+#       v_theta = P * theta_error
+#       cap v_theta at max turn speed value
+
+
+class to_tag_controller:
 
     # Set up initial variables
     # Pass in the ID of this agent and the state dimension (6 or 12)
-    def __init__(self, this_agent_id, dim_state):
+    def __init__(self, this_agent_id, dim_state, controller_type):
 
         # Define publishers and subscribers
-        # Subscribes to control signals
-        self.control_sub = rospy.Subscriber('/cmd_vel', Twist, self.control_callback)
-        # Subscribe to the final information filter results, from the direct estimator or later the consensus
-        self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
-        # Subscribe to the pose output from the camera
-        self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
-        # Publish the information priors (inf_Y = Y_01) and the measurements (inf_I = delta_I)
-        self.inf_pub = rospy.Publisher("/dse/inf/partial", InfFilterPartials, queue_size=10)
+        # Publishes robot control signals
+        self.control_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        # Subscribe to the final information filter output
+        if controller_type == 0:
+            self.inf_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.inf_callback)
+        else:
+            rospy.signal_shutdown('invalid controller type in tag_to_controller.py')
 
         # Grab the state dimension and make sure it is either 6 or 12, as only those two sizes are currently implemented.
         self.dim_state = dim_state
@@ -51,40 +66,72 @@ class information_filter:
         self.t_last = rospy.get_time()
         self.euler_order = dse_constants.EULER_ORDER
 
-        # Define information variables
-        self.inf_P = []
-        self.inf_x = []
-        self.inf_I = []
-        self.inf_i = []
-        self.inf_id_obs = []
-        self.inf_id_comm = []
-
-        # Initialize information variables
-        self.inf_id_list = [self.this_agent_id]
-        self.inf_Y = dse_constants.INF_MATRIX_INITIAL * np.eye(self.dim_state, dtype=np.float64)
-        self.inf_y = dse_constants.INF_VECTOR_INITIAL * \
-                     np.transpose(1 * np.arange(1, self.dim_state + 1, dtype=np.float64))[:, None]
-
-        # Initialize the control input arrays
-        self.ctrl_ids = [self.this_agent_id]
-        self.ctrl = np.zeros((1, 6))
-
-    # When control signals are sent, store them. More logic to come later for storing more than just one agent.
-    def control_callback(self, data):
-        id = 0
-        self.ctrl_ids[0] = self.this_agent_id
-        self.ctrl[id][0] = np.array(data.linear.x)
-        self.ctrl[id][1] = np.array(data.linear.y)
-        self.ctrl[id][2] = np.array(data.linear.z)
-        self.ctrl[id][3] = np.array(data.angular.x)
-        self.ctrl[id][4] = np.array(data.angular.y)
-        self.ctrl[id][5] = np.array(data.angular.z)
+        # Define controller parameters
+        self.V_nominal = 0.5 * self.dt          # meters per second (per time step)
+        self.V_theta_max = 5 * self.V_nominal   # radians per second (per time step)
+        self.P = 0.5 * self.dt                  # each second, cut the angle error in half (per time step)
 
     # When the direct estimator or consensus returns the combined information variables
-    def results_callback(self, data):
-        self.inf_id_list = np.array(data.ids)
-        self.inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
-        self.inf_y = dse_lib.multi_array_2d_output(data.inf_vector)
+    def inf_callback(self, data):
+        inf_id_list = np.array(data.ids)
+        inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
+        inf_y = dse_lib.multi_array_2d_output(data.inf_vector)
+        inf_x = np.linalg.inv(inf_Y).dot(inf_y)
+        inf_P = np.linalg.inv(inf_Y)
+
+        # information filter sub
+        #   create state vector and ID vector from input
+        #       Grab the agent's state
+        #       for each other state
+        #           transform it into the agent's frame
+        #   Pick a target to follow
+        #   Apply controller
+        #       V = constant velocity
+        #       v_theta = P * theta_error
+        #       cap v_theta at max turn speed value
+
+        # information filter sub
+
+        local_ids, local_states = dse_lib.relative_states_from_global_3D(1, inf_id_list, inf_x, self.dim_state, self.dim_obs)
+
+        # # create state vector and ID vector from input
+        # local_ids = self.inf_id_list[np.where(self.inf_id_list != self.this_agent_id)]
+        #
+        # # Grab the agent's state
+        # this_agent_index = np.where(self.inf_id_list == self.this_agent_id)[0][0]
+        # this_agent_state = self.inf_y[this_agent_index : (this_agent_index + self.dim_state)]
+        # indices = np.ones(np.shape(self.inf_y)[0], dtype=bool)
+        # tmp = np.zeros((self.dim_state))
+        # indices[this_agent_index : (this_agent_index + self.dim_state)] = np.zeros((self.dim_state))
+        # other_states = self.inf_y[indices, 0]
+        # # for each other state
+        # for id in local_ids:
+        #     # transform it into the agent's frame
+        #     tmp = 0
+
+        # Pick a target to follow
+        target_id = local_ids[0]
+        target_state = local_states[0:self.dim_state]
+        theta_error = np.arctan2(target_state[1], target_state[0])
+
+        # Apply controller
+        # V = constant velocity
+        velocity = self.V_nominal
+
+        # v_theta = P * theta_error
+        theta_velocity = self.P * theta_error
+
+        # cap v_theta at max turn speed value
+        if theta_velocity > self.V_theta_max:
+            theta_velocity = self.V_theta_max
+        elif theta_velocity < -self.V_theta_max:
+            theta_velocity = -self.V_theta_max
+
+        # Publish control message
+        control = Twist()
+        control.linear.x = velocity
+        control.angular.z = theta_velocity
+        self.control_pub.publish(control)
 
     # When the camera sends a measurement
     def measurement_callback(self, data):
@@ -181,7 +228,8 @@ class information_filter:
 
 def main(args):
     rospy.init_node('information_filter_node', anonymous=True)
-    il = information_filter(1, 6)   # This agent's ID is 1, and the state dimension is 6 (x, y, w, x_dot, y_dot, w_dot)
+    il = to_tag_controller(1, 6, 0)   # This agent's ID is 1, and the state dimension is 6 (x, y, w, x_dot, y_dot, w_dot)
+        # Also controller 0 is a constant-velocity proportional angle controller
     try:
         rospy.spin()
     except KeyboardInterrupt:

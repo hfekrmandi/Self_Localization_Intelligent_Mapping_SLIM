@@ -42,6 +42,16 @@ Other launch files:
 - dse_sim_3_robots_test_plot.launch - Instead of running a gazebo, this file uses a simulation node to create pose estimates for a robot, useful for testing/debugging.
 - dse_sim_3_robots_world_only.launch - Launches the gazebo world and robot, but no other nodes. Useful for testing/debugging individual nodes. 
 
+Visualizing in RVIZ
+- Run the launch file dse_sim_3_robots.launch
+	- This file runs the gazebo base_link true/estimate publisher node. 
+	- In a terminal, source ~/simulation_ws/devel/setup.bash
+	- Run the command roslaunch turtlebot3_gazebo turtlebot3_gazebo_rviz.launch
+	- On the left side, under Displays -> Global Options, change the frame from odom to base_link
+		- base_link is the robot's reference frame, so everything will be displayed in reference to it
+	- Then in the bottom left click Add -> By Topic -> /dse/vis/[estimates or gazebo_true] whatever you want to look at. 
+	- You can also go into each PoseArray and change the color so the pose arrows are individually identifiable
+		- It's recommended to change the true pose to green
 
 Node descriptions - 
 - aruco_pose_estimation_node in aruco_pose_estimation
@@ -50,8 +60,9 @@ Node descriptions -
 	- What it does: uses the aruco library to find the pose of each tag, and publishes that pose in the robot's coordinate frame
 - information_filter_node in information_filter
 	- Inputs: Poses and IDs of all observed tags
-	- Outputs: Information filter partial and measurement (Y_01, y_01, delta_I and delta_i)
+	- Outputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- What it does: Computes a step of the information filter
+	- Reference information filter here
 - direct_estimator_node in direct_estimator
 	- Inputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- Outputs: Information filter full estimate (Y_00 and y_00)
@@ -91,3 +102,7 @@ Debugging the code -
 - By adding print statements
 	- use print() normally in any node file
 	- make sure that in the launch file for each node you have output="screen"
+
+Other files - 
+- src/dse_leb.py
+	- Library of functions for computing R, H, z, F, Q...
