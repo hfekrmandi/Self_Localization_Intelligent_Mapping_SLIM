@@ -1,4 +1,4 @@
-material aruco_marker/Diffuse
+material aruco_marker_1/Diffuse
 {
   receive_shadows off
   technique
@@ -7,7 +7,7 @@ material aruco_marker/Diffuse
     {
       texture_unit
       {
-        texture aruco_marker_0_border_100.jpeg
+        texture aruco_marker_1_border_100.jpeg
       }
     }
   }

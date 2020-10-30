@@ -22,8 +22,14 @@ class direct_estimator:
 
     # Define setup/initial values
     def __init__(self):
-        self.results_pub = rospy.Publisher("/dse/inf/results", InfFilterResults, queue_size=10)
-        self.inf_sub = rospy.Subscriber("/dse/inf/partial", InfFilterPartials, self.information_callback)
+
+        # Get parameters from launch file
+        self.ros_prefix = rospy.get_param('~prefix', '')
+        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+            self.ros_prefix = '/' + self.ros_prefix
+
+        self.results_pub = rospy.Publisher(self.ros_prefix + "/dse/inf/results", InfFilterResults, queue_size=10)
+        self.inf_sub = rospy.Subscriber(self.ros_prefix + "/dse/inf/partial", InfFilterPartials, self.information_callback)
 
     # When the information filter sends partials (prior and measurement), combine and return them
     def information_callback(self, data):

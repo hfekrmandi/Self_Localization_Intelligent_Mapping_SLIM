@@ -192,21 +192,6 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         self.assertEqual(True, np.allclose(agent2_in_frame_agent1_true, agent2_in_frame_agent1_est))
         self.assertEqual(True, np.allclose(agent1_in_frame_agent2_true, agent1_in_frame_agent2_est))
 
-    def test_from_to_from_frame_1(self):
-        ##############################################################################
-        rospy.loginfo("-D- test_from_frame_1")
-        agent1_global = np.array([[0.5], [-7], [2.587394]])
-        agent2_global = np.array([[-6], [-1.42], [5.234]])
-
-        agent2_in_frame_agent1_est = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
-        agent1_in_frame_agent2_est = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
-
-        agent1_global_est = dse_lib.agent2_from_frame_agent1_3D(agent2_global, agent1_in_frame_agent2_est)
-        agent2_global_est = dse_lib.agent2_from_frame_agent1_3D(agent1_global, agent2_in_frame_agent1_est)
-
-        self.assertEqual(True, np.allclose(agent1_global, agent1_global_est))
-        self.assertEqual(True, np.allclose(agent2_global, agent2_global_est))
-
     def test_observation_jacobian_zeros(self):
         ##############################################################################
         rospy.loginfo("-D- test_observation_jacobian_0")
@@ -354,6 +339,51 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         self.assertEqual(state_dim, np.shape(Y_11_2)[1])
         self.assertEqual(state_dim, np.shape(y_11_2)[0])
         self.assertEqual(len(observed_ids), len(id_list_2))
+
+    def test_sort_arrays_0(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_extend_arrays_0")
+
+        dim_state = 2
+
+        id_list = np.arange(5)
+
+        id_list = []
+        id_list.append([0, 1])
+        id_list.append([1, 0])
+        id_list.append([0])
+
+        Y_11 = []
+        Y_11.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
+        Y_11.append(np.array([[3, 2, 1, 0], [4, 3, 2, 1], [5, 4, 3, 2], [6, 5, 4, 3]]))
+        Y_11.append(np.array([[2, 6], [4, 3]]))
+
+        y_11 = []
+        y_11.append(np.array([[0, 1, 2, 3]]))
+        y_11.append(np.array([[3, 2, 1, 0]]))
+        y_11.append(np.array([[2, 6]]))
+
+        I_11 = []
+        I_11.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
+        I_11.append(np.array([[3, 2, 1, 0], [4, 3, 2, 1], [5, 4, 3, 2], [6, 5, 4, 3]]))
+        I_11.append(np.array([[2, 6], [4, 3]]))
+
+        i_11 = []
+        i_11.append(np.array([[0, 1, 2, 3]]))
+        i_11.append(np.array([[3, 2, 1, 0]]))
+        i_11.append(np.array([[2, 6]]))
+
+        array_ids, array_Y, array_y, array_I, array_i = dse_lib.get_sorted_agent_states(id_list, Y_11, y_11, I_11, i_11, dim_state)
+
+        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[0]))
+        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[1]))
+        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[2]))
+
+        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[0]))
+        self.assertNotEqual(True, np.allclose(Y_11[0], array_Y[0]))
+        self.assertNotEqual(True, np.allclose(y_11[0], array_y[0]))
+        self.assertNotEqual(True, np.allclose(I_11[0], array_I[0]))
+        self.assertNotEqual(True, np.allclose(i_11[0], array_i[0]))
 
 
 if __name__ == '__main__':

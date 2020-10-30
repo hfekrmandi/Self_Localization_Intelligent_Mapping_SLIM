@@ -736,3 +736,126 @@ def B_eye(dim_state):
 def B_zeros(dim_state):
     B = np.zeros((dim_state, dim_state))
     return B
+
+
+# # Ensures that every agent has the same state variables in the same order
+# def get_sorted_agent_states(SIM, objectIndex):
+#
+#     # Build combined list of ids
+#     id_list = []
+#     for agent_index in range(np.shape(SIM.OBJECTS)[0]):
+#         if SIM.OBJECTS(agent_index).type == OMAS_objectType.agent:
+#             for i in range(np.shape(SIM.OBJECTS)[0]):
+#                 if objectIndex[agent_index].objectID == SIM.OBJECTS(agent_index).objectID:
+#                     agents[objectIndex[agent_index].objectID] = objectIndex[agent_index]
+#                     id_list = [id_list, objectIndex[agent_index].memory_id_list]
+#
+#     # Ensure that the list is sorted, so it is the same on sequential runs
+#     id_list = sort(unique(id_list))
+#     dim_state = agents[1].dim_state
+#     dim_obs = agents[1].dim_obs
+#     n_agents = numel(id_list)
+#
+#     # Ensure all agents' state variables match the master list
+#     for agent_index in range(np.shape(agents)[0]):
+#         agent = agents[agent_index]
+#
+#         # If the state variables don't match, add them in
+#         if not isequal(agent.memory_id_list, id_list):
+#             Y = 0.01 * np.eye(n_agents * dim_state)
+#             y = zeros(n_agents * dim_state, 1)
+#             I = zeros(n_agents * dim_state)
+#             i = zeros(n_agents * dim_state, 1)
+#
+#             # Move the agents' values to the location specified in the master list
+#             for agent_index_1 in range(np.shape(agent.memory_id_list)[0]):
+#                 for agent_index_2 in range(np.shape(agent.memory_id_list)[0]):
+#
+#                     group_index_1 = find(id_list == agent.memory_id_list[agent_index_1])
+#                     group_index_2 = find(id_list == agent.memory_id_list[agent_index_2])
+#
+#                     # Generate indices (to make the assignment setp shorter)
+#                     g_row_lo = dim_state * (group_index_1 - 1) + 1
+#                     g_row_hi = dim_state * group_index_1
+#                     g_col_lo = dim_state * (group_index_2 - 1) + 1
+#                     g_col_hi = dim_state * group_index_2
+#                     a_row_lo = dim_state * (agent_index_1 - 1) + 1
+#                     a_row_hi = dim_state * agent_index_1
+#                     a_col_lo = dim_state * (agent_index_2 - 1) + 1
+#                     a_col_hi = dim_state * agent_index_2
+#
+#                     Y[g_row_lo:g_row_hi, g_col_lo:g_col_hi] = agent.memory_Y[a_row_lo:a_row_hi, a_col_lo:a_col_hi]
+#                     I[g_row_lo:g_row_hi, g_col_lo:g_col_hi] = agent.memory_I[a_row_lo:a_row_hi, a_col_lo:a_col_hi]
+#
+#                 y[g_row_lo:g_row_hi] = agent.memory_y[a_row_lo:a_row_hi]
+#                 i[g_row_lo:g_row_hi] = agent.memory_i[a_row_lo:a_row_hi]
+#
+#             agent.memory_id_list = id_list
+#             agent.memory_Y = Y
+#             agent.memory_y = y
+#             agent.memory_I = I
+#             agent.memory_i = i
+
+
+# Ensures that every agent has the same state variables in the same order
+def get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_state):
+
+    # Build combined list of ids
+        # Still trying to come up with a way to take in data of any form and return vector of ids
+    id_list = np.unique(array_ids)
+
+    # Ensure that the list is sorted, so it is the same on sequential runs
+    id_list = np.sort(id_list)
+    n_agents = len(id_list)
+
+    # Ensure all agents' state variables match the master list
+    # For each agent that sent in data
+    for i in range(len(array_ids)):
+
+        # If the state variable isn't correct, re-order/extend it
+        if not np.array_equal(id_list, array_ids[i]):
+
+            # Build an empty set of variables
+            # Full-size, ready for data to be inserted
+            # Potentially change the initialization?
+            master_Y = 0.01 * np.eye(n_agents * dim_state)
+            master_y = np.zeros((n_agents * dim_state, 1))
+            master_I = np.zeros((n_agents * dim_state, n_agents * dim_state))
+            master_i = np.zeros((n_agents * dim_state, 1))
+
+            # Move the agents' values to the location specified in the master list
+            # Loop through the input data in chunks of (state_dim x state_dim)
+                # Take each block and move it to the correct location in the master arrays
+            for agent_row_index in range(len(array_ids[i])):
+                for agent_column_index in range(len(array_ids[i])):
+
+                    # Given a chunk of data and a row and column index,
+                    # grab the row and column ids of the input data
+                    # Find the location of those ids in the master arrays
+                    group_row_index = np.where(id_list == array_ids[i][agent_row_index])[0][0]
+                    group_column_index = np.where(id_list == array_ids[i][agent_column_index])[0][0]
+
+                    # Generate indices (to make the assignment step shorter)
+                    g_row_lo = dim_state * group_row_index
+                    g_row_hi = g_row_lo + dim_state
+                    g_col_lo = dim_state * group_column_index
+                    g_col_hi = g_col_lo + dim_state
+                    a_row_lo = dim_state * agent_row_index
+                    a_row_hi = a_row_lo + dim_state
+                    a_col_lo = dim_state * agent_column_index
+                    a_col_hi = a_col_lo + dim_state
+
+                    # Move this chunk of data to the master arrays
+                    master_Y[g_row_lo:g_row_hi, g_col_lo:g_col_hi] = array_Y[i][a_row_lo:a_row_hi, a_col_lo:a_col_hi]
+                    master_I[g_row_lo:g_row_hi, g_col_lo:g_col_hi] = array_I[i][a_row_lo:a_row_hi, a_col_lo:a_col_hi]
+
+                master_y[g_row_lo:g_row_hi] = array_y[i][a_row_lo:a_row_hi]
+                master_i[g_row_lo:g_row_hi] = array_i[i][a_row_lo:a_row_hi]
+
+            array_ids[i] = id_list
+            array_Y[i] = master_Y
+            array_y[i] = master_y
+            array_I[i] = master_I
+            array_i[i] = master_i
+
+    return array_ids, array_Y, array_y, array_I, array_i

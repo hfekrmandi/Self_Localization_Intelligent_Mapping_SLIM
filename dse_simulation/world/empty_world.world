@@ -14,7 +14,7 @@
 
         	<!-- Our custom model -->
 		<include>
-			<uri>model://aruco_marker</uri>
+			<uri>model://aruco_marker_0</uri>
 		</include>
 	</world>
 </sdf>

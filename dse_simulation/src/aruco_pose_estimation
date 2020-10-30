@@ -22,11 +22,18 @@ roslib.load_manifest('dse_simulation')
 class aruco_pose:
 
     def __init__(self):
+
+        # Get parameters from launch file
+        self.ros_prefix = rospy.get_param('~prefix', '')
+        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+            self.ros_prefix = '/' + self.ros_prefix
         # side length of tag in meters
-        self.markerLength = 0.07628*3
+        self.markerLength = rospy.get_param('~marker_length')
+        self.cal_file = rospy.get_param('~calibration_file')
+
         # import saved calibration information
         # calibrationSave.p should be correct for laptop webcam
-        cal = pickle.load(open(os.path.join(sys.path[0], "calibrationSave_2.p"), "rb"))
+        cal = pickle.load(open(os.path.join(sys.path[0], self.cal_file), "rb"))
         self.retval, self.cameraMatrix, self.distCoeffs, self.rvecsUnused, self.tvecsUnused = cal
         para = aruco.DetectorParameters_create()
         para.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
@@ -44,8 +51,8 @@ class aruco_pose:
         n_points_plotting = 100
 
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback)
-        self.pose_pub = rospy.Publisher("/dse/pose_markers", PoseMarkers, queue_size=10)
+        self.image_sub = rospy.Subscriber('/' + self.ros_prefix + "/camera/rgb/image_raw", Image, self.callback)
+        self.pose_pub = rospy.Publisher('/' + self.ros_prefix + "/dse/pose_markers", PoseMarkers, queue_size=10)
 
     def callback(self, data):
         try:
@@ -72,9 +79,9 @@ class aruco_pose:
         # drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, length) -> image
 
         if (ids is not None):
-            print('translation vectors')
-            print(tvecs)
-            print('rotation vectors')
+            # print('translation vectors')
+            # print(tvecs)
+            # print('rotation vectors')
             # print(rvecs)
             # print()
             for i in range(len(rvecs)):
@@ -92,14 +99,12 @@ class aruco_pose:
                 psi *= 180 / np.pi
                 theta *= 180 / np.pi
                 phi *= 180 / np.pi
-                print([psi, theta, phi])
                 ## [psi, theta, phi] rotate about
                 ## [  y,     x,   z] respectively
 
             marker_pose = PoseMarkers()
             marker_pose.ids = ids
             for i in range(len(rvecs)):
-                print(rvecs)
                 pose = Pose()
 
                 pose.position.x = tvecs[0][i][2]
@@ -119,15 +124,14 @@ class aruco_pose:
             marker_pose.pose_array.header.frame_id = 'dse'
             self.pose_pub.publish(marker_pose)
 
-            print()
 
-        cv2.imshow("Image window", frame)
-        cv2.waitKey(3)
+        # cv2.imshow("Image window", frame)
+        # cv2.waitKey(3)
 
 
 def main(args):
-    ic = aruco_pose()
     rospy.init_node('aruco_pose_estimation_node', anonymous=True)
+    ic = aruco_pose()
     try:
         rospy.spin()
     except KeyboardInterrupt:

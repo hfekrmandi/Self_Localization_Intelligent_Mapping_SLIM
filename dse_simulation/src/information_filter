@@ -24,20 +24,26 @@ class information_filter:
 
     # Set up initial variables
     # Pass in the ID of this agent and the state dimension (6 or 12)
-    def __init__(self, this_agent_id, dim_state):
+    def __init__(self):
+
+        # Get parameters from launch file
+        self.ros_prefix = rospy.get_param('~prefix', '')
+        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+            self.ros_prefix = '/' + self.ros_prefix
+        self.this_agent_id = rospy.get_param('~id', 1)
+        self.dim_state = rospy.get_param('~dim_state', 6)
 
         # Define publishers and subscribers
         # Subscribes to control signals
-        self.control_sub = rospy.Subscriber('/cmd_vel', Twist, self.control_callback)
+        self.control_sub = rospy.Subscriber(self.ros_prefix + '/cmd_vel', Twist, self.control_callback)
         # Subscribe to the final information filter results, from the direct estimator or later the consensus
-        self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
+        self.results_sub = rospy.Subscriber(self.ros_prefix + "/dse/inf/results", InfFilterResults, self.results_callback)
         # Subscribe to the pose output from the camera
-        self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
+        self.pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
         # Publish the information priors (inf_Y = Y_01) and the measurements (inf_I = delta_I)
-        self.inf_pub = rospy.Publisher("/dse/inf/partial", InfFilterPartials, queue_size=10)
+        self.inf_pub = rospy.Publisher(self.ros_prefix + "/dse/inf/partial", InfFilterPartials, queue_size=10)
 
         # Grab the state dimension and make sure it is either 6 or 12, as only those two sizes are currently implemented.
-        self.dim_state = dim_state
         if self.dim_state == 6:
             self.dim_obs = 3
         elif self.dim_state == 12:
@@ -46,7 +52,6 @@ class information_filter:
             rospy.signal_shutdown('invalid state dimension passed in')
 
         # Define static variables
-        self.this_agent_id = this_agent_id
         self.dt = 0.1
         self.t_last = rospy.get_time()
         self.euler_order = dse_constants.EULER_ORDER
@@ -154,8 +159,8 @@ class information_filter:
 
         # Compare information filter and kalman filter outputs
         x_inf = np.linalg.inv(Y_00).dot(y_00)
-        print('measurement: ' + str(z_0))
-        print('state: ' + str(x_inf))
+        #print('measurement: ' + str(z_0))
+        #print('state: ' + str(x_inf))
         P_inf = np.linalg.inv(Y_00)
         P_kal = F_0.dot(np.linalg.inv(Y_11).dot((np.transpose(F_0)))) + Q_0
         P_inf = np.linalg.inv(Y_01)
@@ -181,7 +186,7 @@ class information_filter:
 
 def main(args):
     rospy.init_node('information_filter_node', anonymous=True)
-    il = information_filter(1, 6)   # This agent's ID is 1, and the state dimension is 6 (x, y, w, x_dot, y_dot, w_dot)
+    il = information_filter()   # This agent's ID is 1, and the state dimension is 6 (x, y, w, x_dot, y_dot, w_dot)
     try:
         rospy.spin()
     except KeyboardInterrupt:

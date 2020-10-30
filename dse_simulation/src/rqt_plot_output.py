@@ -30,26 +30,31 @@ roslib.load_manifest('dse_simulation')
 class information_filter:
 
     # Define initial/setup values
-    def __init__(self, this_agent_id, dim_state):
-        self.pose_sub = rospy.Subscriber("/dse/pose_markers", PoseMarkers, self.measurement_callback)
-        self.true_sub = rospy.Subscriber("/dse/pose_true", PoseMarkers, self.true_callback)
-        self.results_sub = rospy.Subscriber("/dse/inf/results", InfFilterResults, self.results_callback)
-        self.meas_vis_pub = rospy.Publisher("/dse/plt/measurement", Pose, queue_size=10)
-        self.true_robot_pub = rospy.Publisher("/dse/plt/true/robot", Pose, queue_size=10)
-        self.true_tag_pub = rospy.Publisher("/dse/plt/true/tag", Pose, queue_size=10)
-        self.est_robot_pub = rospy.Publisher("/dse/plt/estimates/robot", Pose, queue_size=10)
-        self.est_tag_pub = rospy.Publisher("/dse/plt/estimates/tag", Pose, queue_size=10)
+    def __init__(self):
 
-        self.dim_state = dim_state
+        # Get parameters from launch file
+        self.ros_prefix = rospy.get_param('~prefix', '')
+        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+            self.ros_prefix = '/' + self.ros_prefix
+        self.this_agent_id = rospy.get_param('~id', 1)
+        self.dim_state = rospy.get_param('~dim_state', 6)
+
+        self.pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
+        self.true_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_true", PoseMarkers, self.true_callback)
+        self.results_sub = rospy.Subscriber(self.ros_prefix + "/dse/inf/results", InfFilterResults, self.results_callback)
+        self.meas_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/plt/measurement", Pose, queue_size=10)
+        self.true_robot_pub = rospy.Publisher(self.ros_prefix + "/dse/plt/true/robot", Pose, queue_size=10)
+        self.true_tag_pub = rospy.Publisher(self.ros_prefix + "/dse/plt/true/tag", Pose, queue_size=10)
+        self.est_robot_pub = rospy.Publisher(self.ros_prefix + "/dse/plt/estimates/robot", Pose, queue_size=10)
+        self.est_tag_pub = rospy.Publisher(self.ros_prefix + "/dse/plt/estimates/tag", Pose, queue_size=10)
+
+
         if self.dim_state == 6:
             self.dim_obs = 3
         elif self.dim_state == 12:
             self.dim_obs = 6
         else:
             rospy.signal_shutdown('invalid state dimension passed in')
-
-        # Define static variables
-        self.this_agent_id = this_agent_id
 
     # Publish the measurement pose
     def measurement_callback(self, data):
@@ -113,7 +118,7 @@ class information_filter:
 
 def main(args):
     rospy.init_node('dse_plotting_node', anonymous=True)
-    il = information_filter(1, 6)
+    il = information_filter()
     try:
         rospy.spin()
     except KeyboardInterrupt:
