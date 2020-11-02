@@ -18,6 +18,7 @@ from std_msgs.msg import MultiArrayDimension
 from dse_msgs.msg import InfFilterPartials
 from dse_msgs.msg import InfFilterResults
 from scipy.spatial.transform import Rotation as R
+import copy
 
 sys.path.append(os.path.join(sys.path[0], "../src"))
 import dse_lib
@@ -47,13 +48,15 @@ class TestInformationFilterCommon(unittest.TestCase):
         # self.exponent = rospy.get_param("range_filter/exponent", -1.31)
         # self.rolling_pts = rospy.get_param("range_filter/rolling_pts", 4)
         self.test_rate = rospy.get_param("~test_rate", 100)
+        self.results_sub = rospy.Subscriber("/tb3_0/dse/inf/results", InfFilterResults, self.estimator_results_callback)
+        self.inf_pub = rospy.Publisher("/tb3_0/dse/inf/partial", InfFilterPartials, queue_size=10)
+
         # self.latest_filtered = 1e10
         # self.latest_std = 2e10
-        self.pose_pub = rospy.Publisher("/dse/pose_markers", PoseMarkers, queue_size=10)
-        self.inf_sub = rospy.Subscriber("/dse/inf/partial", InfFilterPartials, self.information_callback)
         self.dim_state = 6
         self.dim_obs = 3
         self.euler_order = 'zyx'
+        self.got_callback = False
 
     ##############################################################################
     def send_poses(self, poses, rate):
@@ -73,6 +76,14 @@ class TestInformationFilterCommon(unittest.TestCase):
         self.inf_y_prior = dse_lib.multi_array_2d_output(data.inf_vector_prior)
         self.inf_I = dse_lib.multi_array_2d_output(data.obs_matrix)
         self.inf_i = dse_lib.multi_array_2d_output(data.obs_vector)
+
+    # When the direct estimator or consensus returns the combined information variables
+    def estimator_results_callback(self, data):
+        rospy.loginfo("-D- information_filter sent back data")
+        self.inf_id_list = np.array(data.ids)
+        self.inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
+        self.inf_y = dse_lib.multi_array_2d_output(data.inf_vector)
+        self.got_callback = True
 
 
 ##############################################################################
@@ -353,37 +364,167 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         id_list.append([1, 0])
         id_list.append([0])
 
+        # Starting data
         Y_11 = []
         Y_11.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
-        Y_11.append(np.array([[3, 2, 1, 0], [4, 3, 2, 1], [5, 4, 3, 2], [6, 5, 4, 3]]))
+        Y_11.append(np.array([[3, 2, 1, 0], [4, 3, 2, 1], [5, 4, 6, 8], [6, 5, 4, 3]]))
         Y_11.append(np.array([[2, 6], [4, 3]]))
 
         y_11 = []
-        y_11.append(np.array([[0, 1, 2, 3]]))
-        y_11.append(np.array([[3, 2, 1, 0]]))
-        y_11.append(np.array([[2, 6]]))
+        y_11.append(np.array([0, 1, 2, 3])[:, None])
+        y_11.append(np.array([3, 2, 1, 0])[:, None])
+        y_11.append(np.array([2, 6])[:, None])
 
         I_11 = []
         I_11.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
-        I_11.append(np.array([[3, 2, 1, 0], [4, 3, 2, 1], [5, 4, 3, 2], [6, 5, 4, 3]]))
+        I_11.append(np.array([[3, 2, 1, 0], [4, 3, 2, 1], [5, 4, 6, 8], [6, 5, 4, 3]]))
         I_11.append(np.array([[2, 6], [4, 3]]))
 
         i_11 = []
-        i_11.append(np.array([[0, 1, 2, 3]]))
-        i_11.append(np.array([[3, 2, 1, 0]]))
-        i_11.append(np.array([[2, 6]]))
+        i_11.append(np.array([0, 1, 2, 3])[:, None])
+        i_11.append(np.array([3, 2, 1, 0])[:, None])
+        i_11.append(np.array([2, 6])[:, None])
 
-        array_ids, array_Y, array_y, array_I, array_i = dse_lib.get_sorted_agent_states(id_list, Y_11, y_11, I_11, i_11, dim_state)
+        # True result data
+        id_list_true = [0, 1]
 
-        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[0]))
-        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[1]))
-        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[2]))
+        Y_11_true = []
+        Y_11_true.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
+        Y_11_true.append(np.array([[6, 8, 5, 4], [4, 3, 6, 5], [1, 0, 3, 2], [2, 1, 4, 3]]))
+        Y_11_true.append(np.array([[2, 6, 0, 0], [4, 3, 0, 0], [0, 0, 0.01, 0], [0, 0, 0, 0.01]]))
 
-        self.assertNotEqual(True, np.allclose(id_list[0], array_ids[0]))
-        self.assertNotEqual(True, np.allclose(Y_11[0], array_Y[0]))
-        self.assertNotEqual(True, np.allclose(y_11[0], array_y[0]))
-        self.assertNotEqual(True, np.allclose(I_11[0], array_I[0]))
-        self.assertNotEqual(True, np.allclose(i_11[0], array_i[0]))
+        y_11_true = []
+        y_11_true.append(np.array([0, 1, 2, 3])[:, None])
+        y_11_true.append(np.array([1, 0, 3, 2])[:, None])
+        y_11_true.append(np.array([2, 6, 0, 0])[:, None])
+
+        I_11_true = []
+        I_11_true.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
+        I_11_true.append(np.array([[6, 8, 5, 4], [4, 3, 6, 5], [1, 0, 3, 2], [2, 1, 4, 3]]))
+        I_11_true.append(np.array([[2, 6, 0, 0], [4, 3, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]))
+
+        i_11_true = []
+        i_11_true.append(np.array([0, 1, 2, 3])[:, None])
+        i_11_true.append(np.array([1, 0, 3, 2])[:, None])
+        i_11_true.append(np.array([2, 6, 0, 0])[:, None])
+
+        array_ids, array_Y, array_y, array_I, array_i = dse_lib.get_sorted_agent_states(
+            id_list, Y_11, y_11, I_11, i_11, dim_state)
+
+        self.assertEqual(True, np.allclose(id_list_true, array_ids[0]))
+        self.assertEqual(True, np.allclose(id_list_true, array_ids[1]))
+        self.assertEqual(True, np.allclose(id_list_true, array_ids[2]))
+
+        for i in range(3):
+            self.assertEqual(True, np.allclose(Y_11_true[i], array_Y[i]))
+            self.assertEqual(True, np.allclose(y_11_true[i], array_y[i]))
+            self.assertEqual(True, np.allclose(I_11_true[i], array_I[i]))
+            self.assertEqual(True, np.allclose(i_11_true[i], array_i[i]))
+
+    def test_sort_arrays_1(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_extend_arrays_0")
+
+        dim_state = 2
+
+        id_list = np.arange(5)
+
+        id_list = []
+        id_list.append([1, 2, 3])
+        id_list.append([2, 1, 3])
+        id_list.append([3])
+
+        # Starting data
+        Y_11 = []
+        Y_11.append(np.array([[0, 1], [1, 2]]))
+        Y_11.append(np.array([[3, 2], [4, 3]]))
+        Y_11.append(np.array([[2, 6], [4, 3]]))
+
+        y_11 = []
+        y_11.append(np.array([0, 1])[:, None])
+        y_11.append(np.array([3, 2])[:, None])
+        y_11.append(np.array([2, 6])[:, None])
+
+        I_11 = []
+        I_11.append(np.array([[0, 1], [1, 2]]))
+        I_11.append(np.array([[3, 2], [4, 3]]))
+        I_11.append(np.array([[2, 6], [4, 3]]))
+
+        i_11 = []
+        i_11.append(np.array([1, 2, 3])[:, None])
+        i_11.append(np.array([3, 2])[:, None])
+        i_11.append(np.array([2, 6])[:, None])
+
+        # True result data
+        id_list_true = [0, 1]
+
+        Y_11_true = []
+        Y_11_true.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
+        Y_11_true.append(np.array([[6, 8, 5, 4], [4, 3, 6, 5], [1, 0, 3, 2], [2, 1, 4, 3]]))
+        Y_11_true.append(np.array([[2, 6, 0, 0], [4, 3, 0, 0], [0, 0, 0.01, 0], [0, 0, 0, 0.01]]))
+
+        y_11_true = []
+        y_11_true.append(np.array([0, 1, 2, 3])[:, None])
+        y_11_true.append(np.array([1, 0, 3, 2])[:, None])
+        y_11_true.append(np.array([2, 6, 0, 0])[:, None])
+
+        I_11_true = []
+        I_11_true.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
+        I_11_true.append(np.array([[6, 8, 5, 4], [4, 3, 6, 5], [1, 0, 3, 2], [2, 1, 4, 3]]))
+        I_11_true.append(np.array([[2, 6, 0, 0], [4, 3, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]))
+
+        i_11_true = []
+        i_11_true.append(np.array([0, 1, 2, 3])[:, None])
+        i_11_true.append(np.array([1, 0, 3, 2])[:, None])
+        i_11_true.append(np.array([2, 6, 0, 0])[:, None])
+
+        array_ids, array_Y, array_y, array_I, array_i = dse_lib.get_sorted_agent_states(
+            id_list, Y_11, y_11, I_11, i_11, dim_state)
+
+        self.assertEqual(True, np.allclose(id_list_true, array_ids[0]))
+        self.assertEqual(True, np.allclose(id_list_true, array_ids[1]))
+        self.assertEqual(True, np.allclose(id_list_true, array_ids[2]))
+
+        for i in range(3):
+            self.assertEqual(True, np.allclose(Y_11_true[i], array_Y[i]))
+            self.assertEqual(True, np.allclose(y_11_true[i], array_y[i]))
+            self.assertEqual(True, np.allclose(I_11_true[i], array_I[i]))
+            self.assertEqual(True, np.allclose(i_11_true[i], array_i[i]))
+
+    def test_centralized_estimator_0(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_centralized_estimator_0")
+
+        state_dim = 6
+        num_agents = 3
+        inf_ids = np.arange(3)[:, None]
+        inf_Y = np.random.rand(state_dim*num_agents, state_dim*num_agents)
+        inf_y = np.random.rand(state_dim*num_agents, 1)
+        inf_I = np.random.rand(state_dim*num_agents, state_dim*num_agents)
+        inf_i = np.random.rand(state_dim*num_agents, 1)
+
+        target_Y = np.add(inf_Y, inf_I)
+        target_y = np.add(inf_y, inf_i)
+
+        # Write the consensus variables to the publisher
+        inf_partial = InfFilterPartials()
+        inf_partial.ids = inf_ids
+        inf_partial.inf_matrix_prior = dse_lib.multi_array_2d_input(inf_Y, inf_partial.inf_matrix_prior)
+        inf_partial.inf_vector_prior = dse_lib.multi_array_2d_input(inf_y, inf_partial.inf_vector_prior)
+        inf_partial.obs_matrix = dse_lib.multi_array_2d_input(inf_I, inf_partial.obs_matrix)
+        inf_partial.obs_vector = dse_lib.multi_array_2d_input(inf_i, inf_partial.obs_vector)
+        self.inf_pub.publish(inf_partial)
+
+        # r = rospy.Rate(10)
+        # while not self.got_callback:
+        #     r.sleep()
+
+        # target_Y = np.add(inf_Y, inf_I)
+        # target_y = np.add(inf_y, inf_i)
+        #
+        # self.assertEqual(True, np.allclose(inf_ids, self.inf_id_list))
+        # self.assertEqual(True, np.allclose(target_Y, self.inf_Y))
+        # self.assertEqual(True, np.allclose(target_y, self.inf_y))
 
 
 if __name__ == '__main__':

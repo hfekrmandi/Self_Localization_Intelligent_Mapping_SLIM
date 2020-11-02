@@ -32,18 +32,18 @@ class visualizer:
 
         # Get parameters from launch file
 
-        self.n_params = 3
-        # self.n_params = rospy.get_param('~n_params')
+        self.n_params = 4
+        self.n_params = rospy.get_param('~n_params')
         # self.object_names = []
         # #self.object_pose_pubs = []
         # #self.object_name_pubs = []
         self.tf_broadcasters = []
         for i in range(self.n_params):
             self.tf_broadcasters.append(tf.TransformBroadcaster())
-            #self.object_names.append(rospy.get_param('~objects')[i])
+            self.object_names = rospy.get_param('~objects')
             #self.object_pose_pubs.append(rospy.Publisher("/gazebo_true/Pose/%s" % self.object_names[i], PoseArray, queue_size=10))
             #self.object_name_pubs.append(rospy.Publisher("/gazebo_true/Name/%s" % self.object_names[i], Marker, queue_size=10))
-        self.object_names = ['aruco_marker_0', 'aruco_marker_2', 'aruco_marker_3']
+        #self.object_names = ['aruco_marker_0', 'aruco_marker_1', 'aruco_marker_2', 'aruco_marker_3']
         self.object_names = np.array(self.object_names)
         self.link_states_sub = rospy.Subscriber('/gazebo/model_states', ModelStates, self.gzbo_true_callback)
 

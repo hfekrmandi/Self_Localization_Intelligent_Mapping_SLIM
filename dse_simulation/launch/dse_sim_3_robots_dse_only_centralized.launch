@@ -11,10 +11,10 @@
 
   <node pkg="dse_simulation" type="gazebo_sim_visualize_pose_world.py" name="dse_gazebo_object_visualization_node" output="screen">
     <param name="n_params" value="3" />
-    <rosparam param="objects"> ["aruco_marker_0", "aruco_marker_2", "aruco_marker_3"]</rosparam>
+    <rosparam param="objects"> ["aruco_marker_0", "aruco_marker_1", "aruco_marker_2"]</rosparam>
   </node>
 
-  <!--<node pkg="dse_simulation" type="centralized_estimator.py" name="se_centralized_estimator_node" output="screen">
+  <!--<node pkg="dse_simulation" type="centralized_estimator.py" name="dse_centralized_estimator_node" output="screen">
     <param name="n_params" value="3" />
     <rosparam param="objects" subst_value="True"> [$(arg first_tb3), $(arg second_tb3), $(arg third_tb3)]</rosparam>
     <param name="dim_state" type="int" value="$(arg dim_state)" />

@@ -802,9 +802,8 @@ def get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_s
 
     # Build combined list of ids
         # Still trying to come up with a way to take in data of any form and return vector of ids
-    id_list = np.unique(array_ids)
-
-    # Ensure that the list is sorted, so it is the same on sequential runs
+    flat_list = [item for sublist in array_ids for item in sublist]
+    id_list = np.unique(flat_list)
     id_list = np.sort(id_list)
     n_agents = len(id_list)
 
@@ -826,6 +825,7 @@ def get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_s
             # Move the agents' values to the location specified in the master list
             # Loop through the input data in chunks of (state_dim x state_dim)
                 # Take each block and move it to the correct location in the master arrays
+
             for agent_row_index in range(len(array_ids[i])):
                 for agent_column_index in range(len(array_ids[i])):
 

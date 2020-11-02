@@ -30,11 +30,11 @@ class information_filter:
     def __init__(self):
 
         # Get parameters from launch file
-        self.ros_prefix = rospy.get_param('~prefix', '')
+        self.ros_prefix = rospy.get_param('~prefix')
         if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
             self.ros_prefix = '/' + self.ros_prefix
-        self.this_agent_id = rospy.get_param('~id', 1)
-        self.dim_state = rospy.get_param('~dim_state', 6)
+        self.this_agent_id = rospy.get_param('~id')
+        self.dim_state = rospy.get_param('~dim_state')
 
         self.camera_pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
         self.link_states_sub = rospy.Subscriber("/gazebo/link_states", LinkStates, self.gzbo_true_callback)

@@ -11,7 +11,7 @@
 
   <node pkg="dse_simulation" type="gazebo_sim_visualize_pose_world.py" name="dse_gazebo_object_visualization_node" output="screen">
     <param name="n_params" value="3" />
-    <param name="objects" value="[aruco_marker_0, aruco_marker_2, aruco_marker_3]" />
+    <param name="objects" value="[aruco_marker_0, aruco_marker_1, aruco_marker_2]" />
   </node>
 
   <group ns = "$(arg first_tb3)">

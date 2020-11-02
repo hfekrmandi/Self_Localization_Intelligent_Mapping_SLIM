@@ -1,0 +1,12 @@
+<launch>
+  <arg name="first_tb3"  default="tb3_0"/>
+  <arg name="second_tb3" default="tb3_1"/>
+  <arg name="third_tb3"  default="tb3_2"/>
+  <arg name="dim_state"  default="6"/>
+
+  <node pkg="dse_simulation" type="centralized_estimator_10hz_2.py" name="dse_centralized_estimator_node" output="screen">
+    <param name="n_params" value="3" />
+    <rosparam param="objects" subst_value="True"> [$(arg first_tb3), $(arg second_tb3), $(arg third_tb3)]</rosparam>
+    <param name="dim_state" type="int" value="$(arg dim_state)" />
+  </node>
+</launch>
