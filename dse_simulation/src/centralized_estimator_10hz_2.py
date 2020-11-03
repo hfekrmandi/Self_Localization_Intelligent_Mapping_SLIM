@@ -95,50 +95,24 @@ class central_est:
             array_ids, array_Y, array_y, array_I, array_i = \
                 dse_lib.get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, self.dim_state)
 
-            for i in range(len(self.inf_indices)):
-                inf_id_list = array_ids[i]
-                inf_Y = array_Y[i]
-                inf_y = array_y[i]
-                inf_I = array_I[i]
-                inf_i = array_i[i]
-
-                inf_Y = np.add(inf_Y, inf_I)
-                inf_y = np.add(inf_y, inf_i)
-
-                inf_x = np.linalg.inverse(inf_Y).dot(inf_y)
-                inf_P = np.linalg.inverse(inf_Y)
-
-                inf_results = InfFilterResults()
-                inf_results.ids = inf_id_list
-                inf_results.inf_matrix = dse_lib.multi_array_2d_input(inf_Y, inf_results.inf_matrix)
-                inf_results.inf_vector = dse_lib.multi_array_2d_input(inf_y, inf_results.inf_vector)
-                self.inf_pubs[self.inf_indices[i]].publish(inf_results)
-
-            self.inf_indices = []
-            self.inf_id_list = []
-            self.inf_Y = []
-            self.inf_y = []
-            self.inf_I = []
-            self.inf_i = []
-
-            # inf_id_list = array_ids[0]
-            # inf_Y = array_Y[0]
-            # inf_y = array_y[0]
-            # inf_I = array_I[0]
-            # inf_i = array_i[0]
-            # for i in range(1, len(array_ids)):
-            #     inf_I = np.add(inf_I, array_I[i])
-            #     inf_i = np.add(inf_i, array_i[i])
+            # for i in range(len(self.inf_indices)):
+            #     inf_id_list = array_ids[i]
+            #     inf_Y = array_Y[i]
+            #     inf_y = array_y[i]
+            #     inf_I = array_I[i]
+            #     inf_i = array_i[i]
             #
-            # inf_Y = np.add(inf_Y, inf_I)
-            # inf_y = np.add(inf_y, inf_i)
+            #     inf_Y = np.add(inf_Y, inf_I)
+            #     inf_y = np.add(inf_y, inf_i)
             #
-            # for i in self.inf_indices:
+            #     inf_x = np.linalg.inv(inf_Y).dot(inf_y)
+            #     inf_P = np.linalg.inv(inf_Y)
+            #
             #     inf_results = InfFilterResults()
             #     inf_results.ids = inf_id_list
             #     inf_results.inf_matrix = dse_lib.multi_array_2d_input(inf_Y, inf_results.inf_matrix)
             #     inf_results.inf_vector = dse_lib.multi_array_2d_input(inf_y, inf_results.inf_vector)
-            #     self.inf_pubs[i].publish(inf_results)
+            #     self.inf_pubs[self.inf_indices[i]].publish(inf_results)
             #
             # self.inf_indices = []
             # self.inf_id_list = []
@@ -146,6 +120,32 @@ class central_est:
             # self.inf_y = []
             # self.inf_I = []
             # self.inf_i = []
+
+            inf_id_list = array_ids[0]
+            inf_Y = array_Y[0]
+            inf_y = array_y[0]
+            inf_I = array_I[0]
+            inf_i = array_i[0]
+            for i in range(1, len(array_ids)):
+                inf_I = np.add(inf_I, array_I[i])
+                inf_i = np.add(inf_i, array_i[i])
+
+            inf_Y = np.add(inf_Y, inf_I)
+            inf_y = np.add(inf_y, inf_i)
+
+            for i in self.inf_indices:
+                inf_results = InfFilterResults()
+                inf_results.ids = inf_id_list
+                inf_results.inf_matrix = dse_lib.multi_array_2d_input(inf_Y, inf_results.inf_matrix)
+                inf_results.inf_vector = dse_lib.multi_array_2d_input(inf_y, inf_results.inf_vector)
+                self.inf_pubs[i].publish(inf_results)
+
+            self.inf_indices = []
+            self.inf_id_list = []
+            self.inf_Y = []
+            self.inf_y = []
+            self.inf_I = []
+            self.inf_i = []
 
 
 def main(args):

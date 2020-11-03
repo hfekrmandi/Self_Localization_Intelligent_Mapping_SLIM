@@ -344,10 +344,16 @@ def relative_states_from_global_3D(rel_id, ids, states, dim_state, dim_obs):
     rel_index = np.where(ids == rel_id)[0][0]
     obj_ids = ids[np.where(ids != rel_id)]
 
-    rel_state = states[rel_index: (rel_index + dim_state)]
+    min_index = rel_index * dim_state
+    max_index = min_index + dim_state
+
+    rel_state = states[min_index:max_index]
     indices = np.ones(np.shape(states)[0], dtype=bool)
-    indices[rel_index: (rel_index + dim_state)] = np.zeros((dim_state))
+    indices[min_index:max_index] = np.zeros((dim_state))
     obj_states = states[indices, :]
+
+    # print('agent id: ' + str(rel_id) + ' other ids: ' + str(obj_ids))
+    # print('agent state: ' + str(rel_state) + ' other states: ' + str(obj_states))
 
     transformed_states = np.zeros(np.shape(obj_states))
     for i in range(len(obj_ids)):

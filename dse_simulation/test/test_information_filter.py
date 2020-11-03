@@ -526,6 +526,22 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         # self.assertEqual(True, np.allclose(target_Y, self.inf_Y))
         # self.assertEqual(True, np.allclose(target_y, self.inf_y))
 
+    # def test_relative_states_from_global_3D_0(self):
+    #     ##############################################################################
+    #     rospy.loginfo("-D- test_relative_states_from_global_3D_0")
+    #
+    #     dim_state = 6
+    #     dim_obs = 3
+    #
+    #     id_list = np.arange(5)
+    #     n_ids = len(id_list)
+    #     our_id = 1
+    #     states = np.random.rand(dim_state * n_ids, 1)
+    #     states[dim_state*our_id:dim_state*(our_id+1)] = np.zeros((dim_state, 1))
+    #
+    #     obs_ids, obs_states = dse_lib.relative_states_from_global_3D(our_id, id_list, states, dim_state, dim_obs)
+    #     tmp = 0
+
 
 if __name__ == '__main__':
     rospy.loginfo("-I- test_information_filter started")

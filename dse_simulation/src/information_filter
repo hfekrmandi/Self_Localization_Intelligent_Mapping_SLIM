@@ -65,7 +65,7 @@ class information_filter:
         self.inf_id_comm = []
 
         # Initialize information variables
-        self.inf_id_list = [self.this_agent_id]
+        self.inf_id_list = np.array([self.this_agent_id])
         self.inf_Y = dse_constants.INF_MATRIX_INITIAL * np.eye(self.dim_state, dtype=np.float64)
         self.inf_y = dse_constants.INF_VECTOR_INITIAL * \
                      np.transpose(1 * np.arange(1, self.dim_state + 1, dtype=np.float64))[:, None]
