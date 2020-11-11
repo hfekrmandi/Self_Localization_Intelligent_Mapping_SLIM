@@ -37,7 +37,7 @@ def aruco_R_from_range(range):
     # Assuming linear error with a slope of:
     # [x y z phi theta psi]
     # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
-    x = 10*np.transpose([0.01, 0.01, 0.01, 0.01, 0.01, 0.01]) # Radians
+    x = 2*np.transpose([0.01, 0.01, 0.01, 0.01, 0.01, 0.01]) # Radians
     # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
 
     # Slope values are for 3-sigma error, so dividing by 3
@@ -53,7 +53,7 @@ def aruco_R_from_range_3D(range):
     # Assuming linear error with a slope of:
     # [x y z phi theta psi]
     # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
-    x = 10*np.transpose([0.01, 0.01, 0.01]) # Radians
+    x = 2*np.transpose([0.01, 0.01, 0.01]) # Radians
     # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
 
     # Slope values are for 3-sigma error, so dividing by 3
@@ -515,12 +515,12 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
             z_eul = [z_eul[0]]
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range_3D(dist)
-            H_0 = h_camera_3D(H_0, x_11, obs_index, index, dim_state, dim_obs)
+            H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
         else:
             z_pos = np.array(observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z)
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range(dist)
-            H_0 = h_camera(H_0, x_11, obs_index, index, dim_state, dim_obs)
+            H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
 
         z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
 
@@ -548,42 +548,46 @@ def fill_Bu(id_list, my_id, ctrl_ids, x, ctrl, dim_state, dim_obs):
 
         B[i_low:i_high, i_low:i_high] = B_eye(dim_obs)
         if dim_obs == 3:
-            u[i_low:i_high] = np.array([ctrl[i][0], ctrl[i][1], ctrl[i][5]])[:, None]
+            u[i_low+3:i_high+3] = np.array([ctrl[i][0], ctrl[i][1], ctrl[i][4]])[:, None]
         else:
-            u[i_low:i_high] = ctrl[i]
+            u[i_low+6:i_high+6] = ctrl[i]
 
     return B, u
 
 
 # Define the measurement jacobian for a camera (3D-observation)
-def h_camera_3D(H, x, agent1, agent2, dim_state, dim_obs):
+def h_camera_3D(H, x, meas_index, agent1, agent2, dim_state, dim_obs):
     agent1_row_min = dim_state * agent1
     agent1_row_max = agent1_row_min + dim_obs
     agent2_row_min = dim_state * agent2
     agent2_row_max = agent2_row_min + dim_obs
+    meas_row_min = dim_obs * meas_index
+    meas_row_max = meas_row_min + dim_obs
 
     x1 = x[agent1_row_min:agent1_row_max]
     x2 = x[agent2_row_min:agent2_row_max]
 
     Jacobian = np.array(dual_relative_obs_jacobian_3D(x1, x2))
-    H[:, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
-    H[:, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
+    H[meas_row_min:meas_row_max, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
+    H[meas_row_min:meas_row_max, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
     return H
 
 
 # Define the measurement jacobian for a camera
-def h_camera(H, x, agent1, agent2, dim_state, dim_obs):
+def h_camera(H, x, meas_index, agent1, agent2, dim_state, dim_obs):
     agent1_row_min = dim_state * agent1
     agent1_row_max = agent1_row_min + dim_obs
     agent2_row_min = dim_state * agent2
     agent2_row_max = agent2_row_min + dim_obs
+    meas_row_min = dim_obs * meas_index
+    meas_row_max = meas_row_min + dim_obs
 
     x1 = x[agent1_row_min:agent1_row_max]
     x2 = x[agent2_row_min:agent2_row_max]
 
     Jacobian = np.array(dual_relative_obs_jacobian(x1, x2))
-    H[:, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
-    H[:, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
+    H[meas_row_min:meas_row_max, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
+    H[meas_row_min:meas_row_max, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
     return H
 
 
@@ -689,8 +693,8 @@ def q_distance_3D(dt, x, agent1, dim_state):
     i_high = i_low + dim_state
 
     # Q is (dt * (x_dot + 0.001) * 5%) ^ 2
-    Q_pos = (dt * (np.linalg.norm(x[i_low+3:i_low+5]) + 0.001) * 0.05) ** 2
-    Q_theta = (dt * (np.linalg.norm(x[i_low+5]) + 0.001) * 0.05) ** 2
+    Q_pos = (dt * (np.linalg.norm(x[i_low+3:i_low+5]) + 0.1) * 0.05) ** 2
+    Q_theta = (dt * (np.linalg.norm(x[i_low+5]) + 0.1) * 0.05) ** 2
 
     # Define the velocity covariance
     Q = 1 * np.eye(dim_state)

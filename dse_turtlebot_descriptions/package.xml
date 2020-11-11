@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dse_turtlebot_descriptions</name>
+  <version>1.2.3</version>
+  <description>
+    3D models of the TurtleBot3 for simulation and visualization
+  </description>
+  <license>Apache 2.0</license>
+  <author email="alexander.frye@mines.sdsmt.edu">Alex Frye</author>
+  <maintainer email="alexander.frye@mines.sdsmt.edu">Alex Frye</maintainer>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>urdf</depend>
+  <depend>xacro</depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}/media" gazebo_model_path="${prefix}/media"/>
+  </export>
+</package>

@@ -59,13 +59,8 @@ class central_est:
             self.inf_subs.append(rospy.Subscriber(
                 self.object_names[i] + "/dse/inf/partial", InfFilterPartials, self.information_callback, i))
 
-        print('n_params: %d' % self.n_params)
-        print('state dim: %d' % self.dim_state)
-        print('object names: ' + str(self.object_names))
-
     # When the information filter sends partials (prior and measurement), combine and return them
     def information_callback(self, data, agent_index):
-        print('Got message')
         if agent_index in self.inf_indices:
             inf_index = np.where(np.array(self.inf_indices) == agent_index)[0][0]
             self.inf_id_list[inf_index] = data.ids
@@ -83,7 +78,6 @@ class central_est:
 
     # When the information filter sends partials (prior and measurement), combine and return them
     def estimate_and_send(self):
-        print(self.inf_indices)
         if len(self.inf_indices) > 0:
 
             array_ids = copy.deepcopy(self.inf_id_list)
@@ -94,6 +88,7 @@ class central_est:
 
             array_ids, array_Y, array_y, array_I, array_i = \
                 dse_lib.get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, self.dim_state)
+
 
             # for i in range(len(self.inf_indices)):
             #     inf_id_list = array_ids[i]
@@ -113,13 +108,7 @@ class central_est:
             #     inf_results.inf_matrix = dse_lib.multi_array_2d_input(inf_Y, inf_results.inf_matrix)
             #     inf_results.inf_vector = dse_lib.multi_array_2d_input(inf_y, inf_results.inf_vector)
             #     self.inf_pubs[self.inf_indices[i]].publish(inf_results)
-            #
-            # self.inf_indices = []
-            # self.inf_id_list = []
-            # self.inf_Y = []
-            # self.inf_y = []
-            # self.inf_I = []
-            # self.inf_i = []
+
 
             inf_id_list = array_ids[0]
             inf_Y = array_Y[0]
@@ -139,6 +128,7 @@ class central_est:
                 inf_results.inf_matrix = dse_lib.multi_array_2d_input(inf_Y, inf_results.inf_matrix)
                 inf_results.inf_vector = dse_lib.multi_array_2d_input(inf_y, inf_results.inf_vector)
                 self.inf_pubs[i].publish(inf_results)
+
 
             self.inf_indices = []
             self.inf_id_list = []

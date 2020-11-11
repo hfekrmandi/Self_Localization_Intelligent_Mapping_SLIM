@@ -28,8 +28,8 @@ class aruco_pose:
         if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
             self.ros_prefix = '/' + self.ros_prefix
         # side length of tag in meters
-        self.markerLength = rospy.get_param('~marker_length')
-        self.cal_file = rospy.get_param('~calibration_file')
+        self.markerLength = rospy.get_param('~marker_length', 0.22884)
+        self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
 
         # import saved calibration information
         # calibrationSave.p should be correct for laptop webcam
@@ -51,8 +51,8 @@ class aruco_pose:
         n_points_plotting = 100
 
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber('/' + self.ros_prefix + "/camera/rgb/image_raw", Image, self.callback)
-        self.pose_pub = rospy.Publisher('/' + self.ros_prefix + "/dse/pose_markers", PoseMarkers, queue_size=10)
+        self.image_sub = rospy.Subscriber(self.ros_prefix + "/camera/rgb/image_raw", Image, self.callback)
+        self.pose_pub = rospy.Publisher(self.ros_prefix + "/dse/pose_markers", PoseMarkers, queue_size=10)
 
     def callback(self, data):
         try:
@@ -107,11 +107,11 @@ class aruco_pose:
             for i in range(len(rvecs)):
                 pose = Pose()
 
-                pose.position.x = tvecs[0][i][2]
-                pose.position.y = -tvecs[0][i][0]
-                pose.position.z = tvecs[0][i][1]
+                pose.position.x = tvecs[i][0][2]
+                pose.position.y = -tvecs[i][0][0]
+                pose.position.z = tvecs[i][0][1]
 
-                rvecs_reordered = [rvecs[0][i][2], rvecs[0][i][0], rvecs[0][i][1]]
+                rvecs_reordered = [rvecs[i][0][2], rvecs[i][0][0], rvecs[i][0][1]]
                 r = R.from_rotvec(rvecs_reordered)
                 quat = r.as_quat()
 

@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+<robot name="turtlebot3_burger_aruco_0" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro"/>
+
+  <material name="aruco_marker_0">
+    <texture filename="package://dse_turtlebot_descriptions/media/materials/textures/rubik.png"/>
+  </material>
+
+  <joint name="aruco_tag_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="aruco_tag_link"/>
+    <origin xyz="-0.032 0 0.068" rpy="0 0 0"/>
+  </joint>
+
+  <link name="aruco_tag_link">s
+    <collision>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <geometry>
+          <box size="0.01 0.1 0.1" />
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <geometry>
+          <box size="0.01 0.1 0.1" />
+      </geometry>
+      <material name="aruco_marker_0"/>
+    </visual>
+  </link>
+</robot>
