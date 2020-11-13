@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+
+<sdf version="1.5">
+	<world name="default">
+		<!-- A global light source -->
+		<include>
+			<uri>model://sun</uri>
+		</include>
+
+		<!-- A ground plane -->
+		<include>
+			<uri>model://ground_plane</uri>
+		</include>
+
+        	<!-- aruco landmark 0 -->
+		<include>
+			<uri>model://aruco_marker_0</uri>
+			<pose>1 -0.5 0 1.5708 0 0</pose>
+		</include>
+
+        	<!-- aruco landmark 1 -->
+		<include>
+			<uri>model://aruco_marker_1</uri>
+			<pose>1 0 0 1.5708 0 0</pose>
+		</include>
+
+        	<!-- aruco landmark 2 -->
+		<include>
+			<uri>model://aruco_marker_2</uri>
+			<pose>1 0.5 0 1.5708 0 0</pose>
+		</include>
+	</world>
+</sdf>

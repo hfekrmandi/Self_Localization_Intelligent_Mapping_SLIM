@@ -1,6 +1,6 @@
 <launch>
   <arg name="first_tb3_name"  default="tb3_0"/>
-  <arg name="first_tb3_model" default="burger_0"/>
+  <arg name="first_tb3_model" default="burger_5"/>
   <arg name="first_tb3_x_pos" default="-1.0"/>
   <arg name="first_tb3_y_pos" default="-1.0"/>
   <arg name="first_tb3_z_pos" default=" 0.0"/>
@@ -8,7 +8,7 @@
   <arg name="first_tb3_id"    default=" 2001"/>
 
   <arg name="second_tb3_name"  default="tb3_1"/>
-  <arg name="second_tb3_model" default="burger_0"/>
+  <arg name="second_tb3_model" default="burger_6"/>
   <arg name="second_tb3_x_pos" default="-1.0"/>
   <arg name="second_tb3_y_pos" default=" 0.0"/>
   <arg name="second_tb3_z_pos" default=" 0.0"/>
@@ -16,7 +16,7 @@
   <arg name="second_tb3_id"    default=" 2002"/>
 
   <arg name="third_tb3_name"  default="tb3_2"/>
-  <arg name="third_tb3_model" default="burger_0"/>
+  <arg name="third_tb3_model" default="burger_7"/>
   <arg name="third_tb3_x_pos" default="-1.0"/>
   <arg name="third_tb3_y_pos" default=" 1.0"/>
   <arg name="third_tb3_z_pos" default=" 0.0"/>
@@ -38,7 +38,7 @@
   </group>
 
   <group ns = "$(arg second_tb3_name)">
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg second_tb3_model).urdf.xacro" />
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
       <param name="publish_frequency" type="double" value="50.0" />
@@ -49,7 +49,7 @@
   </group>
 
   <group ns = "$(arg third_tb3_name)">
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg third_tb3_model).urdf.xacro" />
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
       <param name="publish_frequency" type="double" value="50.0" />

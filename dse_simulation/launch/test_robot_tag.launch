@@ -1,0 +1,13 @@
+<launch>
+  <arg name="first_tb3_name"  default="tb3_0"/>
+  <arg name="first_tb3_model" default="burger_aruco_0"/>
+  <arg name="first_tb3_x_pos" default="-1.0"/>
+  <arg name="first_tb3_y_pos" default="-1.0"/>
+  <arg name="first_tb3_z_pos" default=" 0.0"/>
+  <arg name="first_tb3_yaw"   default=" 0.0"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch"/>
+
+  <!--<param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/media/turtlebot_$(arg first_tb3_model)/model.sdf" />
+
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg first_tb3_name) -x $(arg first_tb3_x_pos) -y $(arg first_tb3_y_pos) -z $(arg first_tb3_z_pos) -Y $(arg first_tb3_yaw) -param robot_description" />-->
+</launch>

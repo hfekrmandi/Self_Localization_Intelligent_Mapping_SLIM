@@ -1,0 +1,55 @@
+<?xml version="1.0" ?>
+<robot name="turtlebot3_burger_aruco_3" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro"/>
+  <gazebo reference="aruco_tag_link">
+      <material>Gazebo/FlatBlack</material>
+  </gazebo>
+
+  <gazebo reference="aruco_tag_backing_link">
+      <material>Gazebo/White</material>
+  </gazebo>
+
+  <joint name="aruco_tag_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="aruco_tag_link"/>
+    <origin xyz="-0.032 0 0.068" rpy="0 0 0"/>
+  </joint>
+
+  <link name="aruco_tag_link">
+    <collision>
+      <origin xyz="0 -0.05 0.15" rpy="1.571 0 1.571"/>
+      <geometry>
+          <box size="0.01 0.1 0.1" />
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0 -0.05 0.15" rpy="1.571 0 1.571"/>
+      <geometry>
+          <mesh filename="package://dse_turtlebot_descriptions/meshes/aruco/aruco_marker_3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="aruco_tag_backing_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="aruco_tag_backing_link"/>
+    <origin xyz="-0.032 0 0.068" rpy="0 0 0"/>
+  </joint>
+
+  <link name="aruco_tag_backing_link">
+    <collision>
+      <origin xyz="0 -0.05 0.15" rpy="1.571 0 1.571"/>
+      <geometry>
+          <box size="0.1 0.1 0.01" />
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0.0049 -0 0.2" rpy="1.571 0 1.571"/>
+      <geometry>
+          <box size="0.15 0.15 0.01" />
+      </geometry>
+    </visual>
+  </link>
+</robot>
