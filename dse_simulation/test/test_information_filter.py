@@ -203,6 +203,107 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         self.assertEqual(True, np.allclose(agent2_in_frame_agent1_true, agent2_in_frame_agent1_est))
         self.assertEqual(True, np.allclose(agent1_in_frame_agent2_true, agent1_in_frame_agent2_est))
 
+    def test_from_frame_0(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+        agent1_global = np.array([[1], [1], [7/4.0*np.pi]])
+        agent2_global = np.array([[0.4], [-0.6], [5/4.0*np.pi]])
+        agent2_in_frame_agent1_true = np.array([[0.5*np.sqrt(2)], [-1.1*np.sqrt(2)], [3/2.0*np.pi]])
+        agent1_in_frame_agent2_true = np.array([[-1.1*np.sqrt(2)], [-0.5*np.sqrt(2)], [1/2.0*np.pi]])
+
+        agent2_in_frame_agent1_est = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent2_global_est = dse_lib.agent2_from_frame_agent1_3D(agent1_global, agent2_in_frame_agent1_est)
+
+        if agent2_global_est[2, 0] < 0:
+            agent2_global_est[2, 0] += 2*np.pi
+
+        self.assertEqual(True, np.allclose(agent2_global, agent2_global_est))
+
+    def test_from_frame_1(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+
+        # 1 is fixed, 2 is this, 3 is object
+        agent1_global = np.array([[1], [1], [7 / 4.0 * np.pi]])
+        agent2_global = np.array([[0.4], [-0.6], [5 / 4.0 * np.pi]])
+        agent3_global = np.array([[1], [0], [np.pi/2]])
+
+        agent1_in_frame_agent2 = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+        agent1_in_frame_agent3 = dse_lib.agent2_to_frame_agent1_3D(agent3_global, agent1_global)
+        agent2_in_frame_agent1 = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent2_in_frame_agent3 = dse_lib.agent2_to_frame_agent1_3D(agent3_global, agent2_global)
+        agent3_in_frame_agent1 = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent3_global)
+        agent3_in_frame_agent2 = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent3_global)
+
+        z_true = agent3_in_frame_agent2
+        x = agent3_in_frame_agent1
+
+        agent2_global_est = dse_lib.agent2_from_frame_agent1_3D(agent1_global, agent2_in_frame_agent1)
+        agent3_global_est = dse_lib.agent2_from_frame_agent1_3D(agent1_global, agent3_in_frame_agent1)
+        z_est = dse_lib.agent2_to_frame_agent1_3D(agent2_global_est, agent3_global_est)
+
+        z_est_2 = dse_lib.agent2_to_frame_agent1_3D(agent2_in_frame_agent1, agent3_in_frame_agent1)
+
+        self.assertEqual(True, np.allclose(z_true, z_est))
+        self.assertEqual(True, np.allclose(z_true, z_est_2))
+
+    def test_dual_relative_obs_jacobian_3D_0(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+
+        # 1 is fixed, 2 is this, 3 is object
+        agent1_global = np.array([[1], [1], [7 / 4.0 * np.pi]])
+        agent2_global = np.array([[0.4], [-0.6], [5 / 4.0 * np.pi]])
+        agent3_global = np.array([[1.5], [0321], [np.pi/2]])
+
+        agent1_in_frame_agent2 = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+        agent1_in_frame_agent3 = dse_lib.agent2_to_frame_agent1_3D(agent3_global, agent1_global)
+        agent2_in_frame_agent1 = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent2_in_frame_agent3 = dse_lib.agent2_to_frame_agent1_3D(agent3_global, agent2_global)
+        agent3_in_frame_agent1 = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent3_global)
+        agent3_in_frame_agent2 = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent3_global)
+
+        z_true = agent3_in_frame_agent2
+
+        z_fun = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent3_global)
+
+        H = np.array(dse_lib.dual_relative_obs_jacobian_3D(agent2_global, agent3_global))
+        x = np.append(agent2_global, agent3_global)[:, None]
+        z_h = H.dot(x)
+        z_h = np.array([z_h[0][0][0], z_h[1][0][0], z_h[2][0]])[:, None]
+
+        self.assertEqual(True, np.allclose(z_true, z_fun))
+        self.assertEqual(True, np.allclose(z_true, z_h))
+
+    def test_jacobian_fixed_to_obs_3D_0(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_from_frame_1")
+
+        # 1 is fixed, 2 is this, 3 is object
+        agent1_global = np.array([[1], [1], [7 / 4.0 * np.pi]])
+        agent2_global = np.array([[0.4], [-0.6], [5 / 4.0 * np.pi]])
+        agent3_global = np.array([[1.5], [0321], [30.1234*np.pi/2]])
+
+        agent1_in_frame_agent2 = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent1_global)
+        agent1_in_frame_agent3 = dse_lib.agent2_to_frame_agent1_3D(agent3_global, agent1_global)
+        agent2_in_frame_agent1 = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent2_global)
+        agent2_in_frame_agent3 = dse_lib.agent2_to_frame_agent1_3D(agent3_global, agent2_global)
+        agent3_in_frame_agent1 = dse_lib.agent2_to_frame_agent1_3D(agent1_global, agent3_global)
+        agent3_in_frame_agent2 = dse_lib.agent2_to_frame_agent1_3D(agent2_global, agent3_global)
+
+        z_true = agent3_in_frame_agent2
+        x = agent3_in_frame_agent1
+
+        z_fun = dse_lib.agent2_to_frame_agent1_3D(agent2_in_frame_agent1, agent3_in_frame_agent1)
+
+        H = np.array(dse_lib.jacobian_fixed_to_obs_3D(agent2_in_frame_agent1, agent3_in_frame_agent1))
+        x = np.append(agent2_in_frame_agent1, agent3_in_frame_agent1)[:, None]
+        z_h = H.dot(x)
+        z_h = np.array([z_h[0][0][0], z_h[1][0][0], z_h[2][0]])[:, None]
+
+        self.assertEqual(True, np.allclose(z_true, z_fun))
+        self.assertEqual(True, np.allclose(z_true, z_h))
+
     def test_observation_jacobian_zeros(self):
         ##############################################################################
         rospy.loginfo("-D- test_observation_jacobian_0")
@@ -210,7 +311,7 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         agent2 = 1
         x = np.zeros((12, 1))
         H = np.zeros((3, 12))
-        H = dse_lib.h_camera_3D(H, x, agent1, agent2, self.dim_state, self.dim_obs)
+        H = dse_lib.h_camera_3D(H, x, 0, agent1, agent2, self.dim_state, self.dim_obs)
         z_jac = H.dot(x)
 
         agent1_row_min = self.dim_state * agent1
@@ -227,7 +328,7 @@ class TestInformationFilterValid(TestInformationFilterCommon):
 
         zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
         zR = np.transpose(R1).dot(R2)
-        zr = [np.arccos(zR[0, 0])]
+        zr = [-np.arccos(zR[0, 0])]
         z_true = np.concatenate((zt, zr))[:, None]
 
         rospy.loginfo("-D- z_jac (%d, %d)" % (np.shape(z_jac)[0], np.shape(z_jac)[1]))
@@ -241,7 +342,7 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         agent2 = 1
         x = np.transpose([1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])[:, None]
         H = np.zeros((3, 12))
-        H = dse_lib.h_camera_3D(H, x, agent1, agent2, self.dim_state, self.dim_obs)
+        H = dse_lib.h_camera_3D(H, x, 0, agent1, agent2, self.dim_state, self.dim_obs)
         z_jac = H.dot(x)
 
         agent1_row_min = self.dim_state * agent1
@@ -258,7 +359,7 @@ class TestInformationFilterValid(TestInformationFilterCommon):
 
         zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
         zR = np.transpose(R1).dot(R2)
-        zr = [np.arccos(zR[0, 0])]
+        zr = [-np.arccos(zR[0, 0])]
         z_true = np.concatenate((zt, zr))[:, None]
 
         rospy.loginfo("-D- z_jac (%d, %d)" % (np.shape(z_jac)[0], np.shape(z_jac)[1]))
@@ -272,7 +373,7 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         agent2 = 1
         x = np.transpose([1, 2, np.pi/2, 0, 0, 0, 0, 0, -np.pi/2, 0, 0, 0])[:, None]
         H = np.zeros((3, 12))
-        H = dse_lib.h_camera_3D(H, x, agent1, agent2, self.dim_state, self.dim_obs)
+        H = dse_lib.h_camera_3D(H, x, 0, agent1, agent2, self.dim_state, self.dim_obs)
         z_jac = H.dot(x)
 
         agent1_row_min = self.dim_state * agent1
@@ -289,7 +390,7 @@ class TestInformationFilterValid(TestInformationFilterCommon):
 
         zt = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
         zR = np.transpose(R1).dot(R2)
-        zr = [np.arccos(zR[0, 0])]
+        zr = [-np.arccos(zR[0, 0])]
         z_true = np.concatenate((zt, zr))[:, None]
 
         self.assertEqual(True, np.allclose(z_true, z_jac))

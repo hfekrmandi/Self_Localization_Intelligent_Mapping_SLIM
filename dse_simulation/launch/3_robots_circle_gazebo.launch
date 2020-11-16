@@ -1,29 +1,39 @@
 <launch>
   <arg name="first_tb3_name"  default="tb3_0"/>
   <arg name="first_tb3_model" default="burger_5"/>
-  <arg name="first_tb3_x_pos" default="-1.0"/>
+  <arg name="first_tb3_x_pos" default="-1.732"/>
   <arg name="first_tb3_y_pos" default="-1.0"/>
   <arg name="first_tb3_z_pos" default=" 0.0"/>
-  <arg name="first_tb3_yaw"   default=" 0.0"/>
-  <arg name="first_tb3_id"    default=" 2001"/>
+  <arg name="first_tb3_yaw"   default=" 2.095"/>
+  <arg name="first_tb3_id"    default=" 5"/>
 
   <arg name="second_tb3_name"  default="tb3_1"/>
-  <arg name="second_tb3_model" default="burger_6"/>
-  <arg name="second_tb3_x_pos" default="-1.0"/>
-  <arg name="second_tb3_y_pos" default=" 0.0"/>
+  <arg name="second_tb3_model" default="burger_6/>
+  <arg name="second_tb3_x_pos" default=" 1.732"/>
+  <arg name="second_tb3_y_pos" default="-1.0"/>
   <arg name="second_tb3_z_pos" default=" 0.0"/>
-  <arg name="second_tb3_yaw"   default=" 0.0"/>
-  <arg name="second_tb3_id"    default=" 2002"/>
+  <arg name="second_tb3_yaw"   default=" 4.189"/>
+  <arg name="second_tb3_id"    default=" 5"/>
 
   <arg name="third_tb3_name"  default="tb3_2"/>
   <arg name="third_tb3_model" default="burger_7"/>
-  <arg name="third_tb3_x_pos" default="-1.0"/>
-  <arg name="third_tb3_y_pos" default=" 1.0"/>
+  <arg name="third_tb3_x_pos" default=" 0.0"/>
+  <arg name="third_tb3_y_pos" default=" 2.0"/>
   <arg name="third_tb3_z_pos" default=" 0.0"/>
-  <arg name="third_tb3_yaw"   default=" 0.0"/>
-  <arg name="third_tb3_id"    default=" 2003"/>
+  <arg name="third_tb3_yaw"   default=" 0.000"/>
+  <arg name="third_tb3_id"    default=" 5"/>
 
-  <include file="$(find dse_simulation)/launch/3_line_tags.launch">
+  <!-- Launch gazebo world -->
+  <arg name="debug" default="false" />
+  <arg name="gui" default="true" />
+  <arg name="pause" default="false" />
+  <arg name="world" default="$(find dse_simulation)/world/4_aruco_landmarks_square.world" />
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world)" />
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg pause)" />
+    <arg name="use_sim_time" value="true" />
   </include>
 
   <group ns = "$(arg first_tb3_name)">
@@ -38,7 +48,7 @@
   </group>
 
   <group ns = "$(arg second_tb3_name)">
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg second_tb3_model).urdf.xacro" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
       <param name="publish_frequency" type="double" value="50.0" />
@@ -49,7 +59,7 @@
   </group>
 
   <group ns = "$(arg third_tb3_name)">
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg third_tb3_model).urdf.xacro" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
       <param name="publish_frequency" type="double" value="50.0" />

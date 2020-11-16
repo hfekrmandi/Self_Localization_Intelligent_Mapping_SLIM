@@ -1,0 +1,34 @@
+<launch>
+  <!-- turtlebot variables -->
+  <arg name="first_tb3_name"  default="tb3_0"/>
+  <arg name="first_tb3_model" default="burger_5"/>
+  <arg name="first_tb3_x_pos" default="-0.5"/>
+  <arg name="first_tb3_y_pos" default=" 0.0"/>
+  <arg name="first_tb3_z_pos" default=" 0.0"/>
+  <arg name="first_tb3_yaw"   default=" 1.57079632679"/>
+  <arg name="first_tb3_id"    default=" 5"/>
+
+  <!-- Launch gazebo world -->
+  <arg name="debug" default="false" />
+  <arg name="gui" default="true" />
+  <arg name="pause" default="false" />
+  <arg name="world" default="$(find dse_simulation)/world/2_aruco_landmarks_away_line.world" />
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world)" />
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg pause)" />
+    <arg name="use_sim_time" value="true" />
+  </include>
+
+  <group ns = "$(arg first_tb3_name)">
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
+      <param name="publish_frequency" type="double" value="50.0" />
+      <param name="tf_prefix" value="$(arg first_tb3_name)" />
+    </node>
+
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg first_tb3_name) -x $(arg first_tb3_x_pos) -y $(arg first_tb3_y_pos) -z $(arg first_tb3_z_pos) -Y $(arg first_tb3_yaw) -param robot_description" />
+  </group>
+</launch>

@@ -3,23 +3,23 @@
   <arg name="second_tb3" default="tb3_1"/>
   <arg name="third_tb3"  default="tb3_2"/>
   <arg name="dim_state"  default="6"/>
-  <arg name="marker_length"  default="0.22884"/>
+  <arg name="marker_length"  default="0.1"/>
   <arg name="aruco_cal_file"  default="calibrationSave_2.p"/>
 
   <arg name="first_tb3_x"     default="-1.0"/>
   <arg name="first_tb3_y"     default="-1.0"/>
   <arg name="first_tb3_yaw"   default=" 0.0"/>
-  <arg name="first_tb3_id"    default=" 2001"/>
+  <arg name="first_tb3_id"    default=" 5"/>
 
   <arg name="second_tb3_x"    default="-1.0"/>
   <arg name="second_tb3_y"    default=" 0.0"/>
   <arg name="second_tb3_yaw"  default=" 0.0"/>
-  <arg name="second_tb3_id"   default=" 2002"/>
+  <arg name="second_tb3_id"   default=" 6"/>
 
   <arg name="third_tb3_x"     default="-1.0"/>
   <arg name="third_tb3_y"     default=" 1.0"/>
   <arg name="third_tb3_yaw"   default=" 0.0"/>
-  <arg name="third_tb3_id"    default=" 2003"/>
+  <arg name="third_tb3_id"    default=" 7"/>
 
   <arg name="landmark_1_x"    default=" 1.0"/>
   <arg name="landmark_1_y"    default="-0.5"/>

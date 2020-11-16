@@ -33,22 +33,54 @@ class information_filter:
         self.this_agent_id = rospy.get_param('~id')
         self.dim_state = rospy.get_param('~dim_state')
         self.fixed_id = rospy.get_param('~fixed_id')
-        self.init_ids = rospy.get_param('~initial_ids')
-        self.init_est = rospy.get_param('~initial_estimates')
+        self.init_ids = np.array(rospy.get_param('~initial_ids'))
+        self.init_est = np.array(rospy.get_param('~initial_estimates'))
+
+        # Changes to integrate fixed agent
+        # Fixed agent needs to be a landmark (Not necessarily the same for each agent)
+        # X Remove the fixed agent from all normal variables
+        # X     Not in id list, x, or P
+        # X     Its state does not get estimated, it's always at [0, 0, 0]
+        # X x is now the relative state from [0, 0, 0]
+        # X     At the start, for each agent x = x to frame agent f
+        #   H now transforms a local measurement of agent x -> y to agent f -> x
+        #       f is the fixed agent, y is the observer, x is the observed object
+        #       z = Hx, H takes measurement of x from f, transforms it to measurement of x from y
+        #       transform measurement z from frame y to frame f
+        #           from frame y to global
+        #           to frame f
+        #   F now does ?????????
+        #       Each agent can move with/against F, plus their own?
+        #   B now does?
+        #       Rotate/translate all objects by the computed amount?
+        #   State sorting function Needs to combine anchors as well
+        #       If we have the transform between them, it's easy
+        #       If not, ??? (Don't consensus i guess?)
+
+        #   Each agent has a noisy GPS/magnetometer
+        #   Instead of a relative observation, each agent gives us an absolute measurement
+        #   Compute H, I for relative measurements
+        #   Compute H1, I1 for absolute measurements
+        #   I = I + I1
+
+        # Agents A, B, and a few landmarks
+        # Agents A and B separately pick anchors
+        # No comms - Everything is fine
+        # With comms - Either
+        #   Use the same anchor
+        #   We have the transform, figure it out
 
         # self.ros_prefix = '/tb3_0'
-        # self.this_agent_id = 2001
+        # self.this_agent_id = 5
         # self.dim_state = 6
-        # self.fixed_id = 2001
-        # self.init_ids = [2001, 2002, 2003, 0, 1, 2]
-        # self.init_est = [-1.0,-1.0, 0.0, 0, 0, 0,
+        # self.fixed_id = 0
+        # self.init_ids = np.array([5, 6, 7, 0, 1, 2])
+        # self.init_est = np.array([-1.0,-1.0, 0.0, 0, 0, 0,
         #                  -1.0, 0.0, 0.0, 0, 0, 0,
         #                  -1.0, 1.0, 0.0, 0, 0, 0,
         #                   1.0,-0.5, 0.0, 0, 0, 0,
         #                   1.0, 0.0, 0.0, 0, 0, 0,
-        #                   1.0, 0.5, 0.0, 0, 0, 0]
-        # self.init_ids = []
-        # self.init_est = []
+        #                   1.0, 0.5, 0.0, 0, 0, 0])
 
         # Define publishers and subscribers
         # Subscribes to control signals
@@ -85,21 +117,20 @@ class information_filter:
         print(self.init_est)
 
         # Initialize information variables
-        self.inf_id_list = self.init_ids
+        self.inf_id_list = self.init_ids[self.init_ids != self.fixed_id]
         n_agents = len(self.init_ids)
-        fixed_index = np.where(self.inf_id_list == self.fixed_id)[0][0]
-        fixed_state = self.init_est[fixed_index * self.dim_state: (fixed_index + 1) * self.dim_state]
+        fixed_index = np.where(self.init_ids == self.fixed_id)[0][0]
+        self.fixed_state = self.init_est[fixed_index * self.dim_state: (fixed_index + 1) * self.dim_state][:, None]
         self.inf_y = []
         for i in range(n_agents):
-            if i is not fixed_index:
-                state = self.init_est[i * self.dim_state: (i + 1) * self.dim_state]
-                relative = dse_lib.agent2_to_frame_agent1_3D(fixed_state, state)
-                self.inf_y.extend(relative)
-            else:
-                self.inf_y.extend(fixed_state)
+            if i != fixed_index:
+                state = self.init_est[i * self.dim_state: (i + 1) * self.dim_state][:, None]
+                relative = dse_lib.agent2_to_frame_agent1_3D(self.fixed_state, state)
+                self.inf_y.extend(relative[:,0])
+                self.inf_y.extend([0, 0, 0])
+
         self.inf_Y = dse_constants.INF_MATRIX_INITIAL * np.eye(self.dim_state*(n_agents - 1), dtype=np.float64)
-        self.inf_y = self.inf_Y.dot(self.inf_y)[:, None]
-        print(self.inf_y)
+        self.inf_y = self.inf_Y.dot(np.array(self.inf_y)[:, None])
 
         # Initialize the control input arrays
         self.ctrl_ids = [self.this_agent_id]
@@ -148,7 +179,7 @@ class information_filter:
         # H - Measurement Jacobian
         # z - The measurement itself
         # This function is defined in src/dse_lib.py
-        R_0, H_0, z_0 = dse_lib.fill_RHz(id_list, self.this_agent_id, observed_ids, observed_poses, x_11,
+        R_0, H_0, z_0 = dse_lib.fill_RHz_fixed(id_list, self.this_agent_id, observed_ids, observed_poses, x_11,
                                          self.euler_order, self.dim_state, self.dim_obs)
 
         # F - Motion Jacobian

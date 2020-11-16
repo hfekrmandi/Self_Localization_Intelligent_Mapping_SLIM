@@ -10,13 +10,13 @@
         	<!-- aruco landmark 0 -->
 		<include>
 			<uri>model://aruco_marker_0</uri>
-			<pose>0 3 0 0 0 1.57079632679</pose>
+			<pose>0 3 0.25 0 0 1.57079632679</pose>
 		</include>
 
         	<!-- aruco landmark 1 -->
 		<include>
 			<uri>model://aruco_marker_1</uri>
-			<pose>0 6 0 0 0 1.57079632679</pose>
+			<pose>0 6 0.25 0 0 1.57079632679</pose>
 		</include>
 	</world>
 </sdf>

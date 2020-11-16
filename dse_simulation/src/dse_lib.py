@@ -53,7 +53,7 @@ def aruco_R_from_range_3D(range):
     # Assuming linear error with a slope of:
     # [x y z phi theta psi]
     # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
-    x = 2*np.transpose([0.01, 0.01, 0.01]) # Radians
+    x = 20*np.transpose([0.01, 0.01, 0.01]) # Radians
     # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
 
     # Slope values are for 3-sigma error, so dividing by 3
@@ -309,13 +309,13 @@ def agent2_to_frame_agent1_3D(agent1_global, agent2_global):
     return z
 
 
-def agent2_from_frame_agent1(agent1_in_agent2, agent2_global):
-    t1 = agent2_global[0:3]
-    r1 = R.from_euler(dse_constants.EULER_ORDER, agent2_global[3:6, 0])
+def agent2_from_frame_agent1(agent2_in_agent1, agent1_global):
+    t1 = agent1_global[0:3]
+    r1 = R.from_euler(dse_constants.EULER_ORDER, agent1_global[3:6, 0])
     R1 = r1.as_dcm()
 
-    t2 = agent1_in_agent2[0:3]
-    r2 = R.from_euler(dse_constants.EULER_ORDER, agent1_in_agent2[3:6, 0])
+    t2 = agent2_in_agent1[0:3]
+    r2 = R.from_euler(dse_constants.EULER_ORDER, agent2_in_agent1[3:6, 0])
     R2 = r2.as_dcm()
 
     tz = (R1.dot(t2) + t1)[:, 0]
@@ -326,16 +326,16 @@ def agent2_from_frame_agent1(agent1_in_agent2, agent2_global):
     return z
 
 
-def agent2_from_frame_agent1_3D(agent2_global, agent1_in_agent2):
-    t1 = agent2_global[0:2, 0]
-    R1 = theta_2_rotm(agent2_global[2, 0])
+def agent2_from_frame_agent1_3D(agent1_global, agent2_in_agent1):
+    t1 = agent1_global[0:2, 0]
+    R1 = theta_2_rotm(agent1_global[2, 0])
 
-    t2 = agent1_in_agent2[0:2, 0]
-    R2 = theta_2_rotm(agent1_in_agent2[2, 0])
+    t2 = agent2_in_agent1[0:2, 0]
+    R2 = theta_2_rotm(agent2_in_agent1[2, 0])
 
     tz = (R1.dot(t2) + t1)
     Rz = R1.dot(R2)
-    rz = [np.arctan2(Rz[0, 1], Rz[0, 0])]
+    rz = [-np.arctan2(Rz[0, 1], Rz[0, 0])]
     z = np.concatenate((tz, rz))[:, None]
     return z
 
@@ -410,7 +410,27 @@ def dual_relative_obs_jacobian_3D(state1, state2):
 
     Jx = [-np.cos(t1), -np.sin(t1), 0, np.cos(t1), np.sin(t1), 0]
     Jy = [np.sin(t1), -np.cos(t1), 0, -np.sin(t1), np.cos(t1), 0]
-    Jt = [0, 0, 1, 0, 0, -1]
+    Jt = [0, 0, -1, 0, 0, 1]
+
+    J = [Jx, Jy, Jt]
+    return J
+
+
+# Compute the observation jacobian H for a 3D-observation system
+# Given two state vectors in the global coordinate system, x1 and x2
+# What is the jacobian of the local observation of x2 from x1
+def jacobian_fixed_to_obs_3D(state1, state2):
+
+    # z = Hx
+    # z = meas from this to object (of object from this, object in frame this)
+    # x = meas from fixed to object (of object from fixed, object in frame fixed)
+    #z = agent2_to_frame_agent1_3D(state1=this_in_frame_fixed, state2=obj_in_frame_fixed)
+
+    [x1, y1, t1] = state1
+    [x2, y2, t2] = state2
+    Jx = [-np.cos(t1), -np.sin(t1), 0, np.cos(t1), np.sin(t1), 0]
+    Jy = [np.sin(t1), -np.cos(t1), 0, -np.sin(t1), np.cos(t1), 0]
+    Jt = [0, 0, -1, 0, 0, 1]
 
     J = [Jx, Jy, Jt]
     return J
@@ -459,8 +479,8 @@ def fill_FQ(id_list, dt, x_11, dim_state, dim_obs):
         i_high = i_low + dim_state
 
         # If we are looking at ID 0, it is a waypoint and as such doesn't move (F is identity matrix)
-        if id_list[i] == -1:
-            Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
+        if id_list[i] < 5:
+            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001/dt)
             F_0[i_low:i_high, i_low:i_high] = f_eye(dim_state)
         else:
             # Else use the unicycle model
@@ -527,6 +547,56 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
     return R_0, H_0, z_0
 
 
+# Fill in the matrices R and H, as well as the vector z
+# R - Measurement Covariance
+# H - Measurement Jacobian
+# z - The measurement itself
+def fill_RHz_fixed(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, R_var=0.001):
+    # Define the sizes of each variable
+    n_stored = len(id_list)
+    n_obs = len(observed_ids)
+    R_0 = R_var * np.eye(n_obs * dim_obs)
+    H_0 = np.zeros((n_obs * dim_obs, n_stored * dim_state))
+    z_0 = np.zeros((n_obs * dim_obs, 1))
+
+    # Fill in H and Z
+    for i in range(len(observed_ids)):
+        id = observed_ids[i]
+        index = np.where(id_list == id)[0][0]  # Index of observed agent
+        obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
+
+        i_low = dim_obs * i
+        i_high = i_low + dim_obs
+
+        # Compute the euler angles from the quaternion passed in
+        quat = np.zeros(4)
+        quat[0] = observed_poses[i].orientation.x
+        quat[1] = observed_poses[i].orientation.y
+        quat[2] = observed_poses[i].orientation.z
+        quat[3] = observed_poses[i].orientation.w
+        r = R.from_quat(quat)
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
+        z_eul = r.as_euler(euler_order)
+
+        # Different functions for 3D vs. 6D observation
+        if dim_obs == 3:
+            z_pos = np.array([observed_poses[i].position.x, observed_poses[i].position.y])
+            z_eul = [z_eul[0]]
+            dist = np.linalg.norm(z_pos)
+            R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range_3D(dist)
+            H_0 = h_camera_fixed_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+        else:
+            return None
+        #     z_pos = np.array(observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z)
+        #     dist = np.linalg.norm(z_pos)
+        #     R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range(dist)
+        #     H_0 = h_camera_fixed(H_0, fixed_state, x_11, i, obs_index, index, dim_state, dim_obs)
+
+        z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+
+    return R_0, H_0, z_0
+
+
 # Fill in the matrix B and the vector u
 # B - Control matrix
 # u - Control signals
@@ -586,6 +656,24 @@ def h_camera(H, x, meas_index, agent1, agent2, dim_state, dim_obs):
     x2 = x[agent2_row_min:agent2_row_max]
 
     Jacobian = np.array(dual_relative_obs_jacobian(x1, x2))
+    H[meas_row_min:meas_row_max, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
+    H[meas_row_min:meas_row_max, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
+    return H
+
+
+# Define the measurement jacobian for a camera (3D-observation)
+def h_camera_fixed_3D(H, x, meas_index, agent1, agent2, dim_state, dim_obs):
+    agent1_row_min = dim_state * agent1
+    agent1_row_max = agent1_row_min + dim_obs
+    agent2_row_min = dim_state * agent2
+    agent2_row_max = agent2_row_min + dim_obs
+    meas_row_min = dim_obs * meas_index
+    meas_row_max = meas_row_min + dim_obs
+
+    x1 = x[agent1_row_min:agent1_row_max]
+    x2 = x[agent2_row_min:agent2_row_max]
+
+    Jacobian = np.array(jacobian_fixed_to_obs_3D(x1, x2))
     H[meas_row_min:meas_row_max, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
     H[meas_row_min:meas_row_max, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
     return H
