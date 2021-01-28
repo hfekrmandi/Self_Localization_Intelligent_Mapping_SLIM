@@ -11,27 +11,27 @@
   <arg name="first_tb3_id"    default=" 5"/>
 
   <arg name="landmark_1_x"    default="-2.0"/>
-  <arg name="landmark_1_y"    default=" 2.0"/>
+  <arg name="landmark_1_y"    default="-2.0"/>
   <arg name="landmark_1_yaw"  default=" 0.0"/>
-  <arg name="landmark_1_id"   default="0"/>
+  <arg name="landmark_1_id"   default="2"/>
   <arg name="landmark_1_name" default="aruco_marker_0"/>
 
-  <arg name="landmark_2_x"    default="-2.0"/>
+  <arg name="landmark_2_x"    default=" 2.0"/>
   <arg name="landmark_2_y"    default="-2.0"/>
-  <arg name="landmark_2_yaw"  default=" 1.5708"/>
-  <arg name="landmark_2_id"   default="1"/>
+  <arg name="landmark_2_yaw"  default=" 1.5710"/>
+  <arg name="landmark_2_id"   default="3"/>
   <arg name="landmark_2_name" default="aruco_marker_1"/>
 
   <arg name="landmark_3_x"    default=" 2.0"/>
   <arg name="landmark_3_y"    default=" 2.0"/>
   <arg name="landmark_3_yaw"  default=" 3.1416"/>
-  <arg name="landmark_3_id"   default="2"/>
+  <arg name="landmark_3_id"   default="0"/>
   <arg name="landmark_3_name" default="aruco_marker_2"/>
 
-  <arg name="landmark_4_x"    default=" 2.0"/>
-  <arg name="landmark_4_y"    default="-2.0"/>
+  <arg name="landmark_4_x"    default="-2.0"/>
+  <arg name="landmark_4_y"    default=" 2.0"/>
   <arg name="landmark_4_yaw"  default=" 4.7124"/>
-  <arg name="landmark_4_id"   default="3"/>
+  <arg name="landmark_4_id"   default="1"/>
   <arg name="landmark_4_name" default="aruco_marker_3"/>
 
   <node pkg="dse_simulation" type="gazebo_sim_visualize_pose_world.py" name="dse_gazebo_object_visualization_node" output="screen">

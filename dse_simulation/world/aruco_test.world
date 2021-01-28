@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+
+<sdf version="1.5">
+	<world name="default">
+		<!-- A ground plane -->
+		<include>
+			<uri>model://ground_plane</uri>
+		</include>
+
+        	<!-- aruco landmark 0 -->
+		<include>
+			<uri>model://aruco_marker_0</uri>
+			<pose>1 0 0.25 0 0 0</pose>
+		</include>
+	</world>
+</sdf>

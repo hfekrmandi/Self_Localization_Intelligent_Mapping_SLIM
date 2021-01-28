@@ -1,0 +1,162 @@
+<launch>
+  <arg name="first_tb3"  default="tb3_0"/>
+  <arg name="second_tb3" default="tb3_1"/>
+  <arg name="third_tb3"  default="tb3_2"/>
+  <arg name="dim_state"  default="6"/>
+  <arg name="marker_length"  default="0.1"/>
+  <arg name="aruco_cal_file"  default="calibrationSave_2.p"/>
+  <arg name="fixed_id"  default="0"/>
+
+  <arg name="first_tb3_x"     default="-1.0"/>
+  <arg name="first_tb3_y"     default=" 0.0"/>
+  <arg name="first_tb3_yaw"   default=" 1.5708"/>
+  <arg name="first_tb3_id"    default=" 5"/>
+
+  <arg name="second_tb3_x"    default=" 0.0"/>
+  <arg name="second_tb3_y"    default=" 0.0"/>
+  <arg name="second_tb3_yaw"  default=" 1.5708"/>
+  <arg name="second_tb3_id"   default=" 6"/>
+
+  <arg name="third_tb3_x"     default=" 1.0"/>
+  <arg name="third_tb3_y"     default=" 0.0"/>
+  <arg name="third_tb3_yaw"   default=" 1.5708"/>
+  <arg name="third_tb3_id"    default=" 7"/>
+
+  <arg name="landmark_1_x"    default="-0.5"/>
+  <arg name="landmark_1_y"    default=" 3.0"/>
+  <arg name="landmark_1_yaw"  default=" 4.7124"/>
+  <arg name="landmark_1_id"   default="0"/>
+  <arg name="landmark_1_name" default="aruco_marker_0"/>
+
+  <arg name="landmark_2_x"    default=" 0.5"/>
+  <arg name="landmark_2_y"    default=" 3.0"/>
+  <arg name="landmark_2_yaw"  default=" 4.7124"/>
+  <arg name="landmark_2_id"   default="1"/>
+  <arg name="landmark_2_name" default="aruco_marker_1"/>
+
+  <arg name="landmark_3_x"    default="-0.5"/>
+  <arg name="landmark_3_y"    default=" 6.0"/>
+  <arg name="landmark_3_yaw"  default=" 4.7124"/>
+  <arg name="landmark_3_id"   default="2"/>
+  <arg name="landmark_3_name" default="aruco_marker_2"/>
+
+  <arg name="landmark_4_x"    default=" 0.5"/>
+  <arg name="landmark_4_y"    default=" 6.0"/>
+  <arg name="landmark_4_yaw"  default=" 4.7124"/>
+  <arg name="landmark_4_id"   default="3"/>
+  <arg name="landmark_4_name" default="aruco_marker_3"/>
+
+  <node pkg="dse_simulation" type="centralized_estimator_10hz_2.py" name="dse_centralized_estimator_node" output="screen">
+    <param name="n_params" value="3" />
+    <rosparam param="objects" subst_value="True"> [$(arg first_tb3), $(arg second_tb3), $(arg third_tb3)]</rosparam>
+    <param name="dim_state" type="int" value="$(arg dim_state)" />
+  </node>
+
+  <group ns = "$(arg first_tb3)">
+    <node pkg="dse_simulation" type="aruco_pose_estimation" name="aruco_pose_estimation_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3)" />
+      <param name="marker_length" type="double" value="$(arg marker_length)" />
+      <param name="calibration_file" value="$(arg aruco_cal_file)" />
+    </node>
+    <node pkg="dse_simulation" type="information_filter" name="information_filter_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+      <rosparam param="initial_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
+      </rosparam>
+      <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
+                 $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
+                 $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
+                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
+                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
+                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+      </rosparam>
+    </node>
+    <node pkg="dse_simulation" type="rqt_plot_output.py" name="dse_plotting_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+    <node pkg="dse_simulation" type="gazebo_sim_visualize_pose_base.py" name="dse_gazebo_visualization_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+  </group>
+
+  <group ns = "$(arg second_tb3)">
+    <node pkg="dse_simulation" type="aruco_pose_estimation" name="aruco_pose_estimation_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3)" />
+      <param name="marker_length" type="double" value="$(arg marker_length)" />
+      <param name="calibration_file" value="$(arg aruco_cal_file)" />
+    </node>
+    <node pkg="dse_simulation" type="information_filter" name="information_filter_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3)" />
+      <param name="id" type="int" value="$(arg second_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+      <rosparam param="initial_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
+      </rosparam>
+      <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
+                 $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
+                 $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
+                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
+                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
+                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+      </rosparam>
+    </node>
+    <node pkg="dse_simulation" type="rqt_plot_output.py" name="dse_plotting_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3)" />
+      <param name="id" type="int" value="$(arg second_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+    <node pkg="dse_simulation" type="gazebo_sim_visualize_pose_base.py" name="dse_gazebo_visualization_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3)" />
+      <param name="id" type="int" value="$(arg second_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+  </group>
+
+  <group ns = "$(arg third_tb3)">
+    <node pkg="dse_simulation" type="aruco_pose_estimation" name="aruco_pose_estimation_node" output="screen">
+      <param name="prefix" value="$(arg third_tb3)" />
+      <param name="marker_length" type="double" value="$(arg marker_length)" />
+      <param name="calibration_file" value="$(arg aruco_cal_file)" />
+    </node>
+    <node pkg="dse_simulation" type="information_filter" name="information_filter_node" output="screen">
+      <param name="prefix" value="$(arg third_tb3)" />
+      <param name="id" type="int" value="$(arg third_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+      <rosparam param="initial_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
+      </rosparam>
+      <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
+                 $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
+                 $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
+                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
+                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
+                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+      </rosparam>
+    </node>
+    <node pkg="dse_simulation" type="rqt_plot_output.py" name="dse_plotting_node" output="screen">
+      <param name="prefix" value="$(arg third_tb3)" />
+      <param name="id" type="int" value="$(arg third_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+    <node pkg="dse_simulation" type="gazebo_sim_visualize_pose_base.py" name="dse_gazebo_visualization_node" output="screen">
+      <param name="prefix" value="$(arg third_tb3)" />
+      <param name="id" type="int" value="$(arg third_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+  </group>
+</launch>

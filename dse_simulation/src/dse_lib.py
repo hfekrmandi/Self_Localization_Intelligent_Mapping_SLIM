@@ -70,6 +70,12 @@ def theta_2_rotm(theta):
     return R
 
 
+# Compute the 2D rotation matrix from the angle theta
+def rotm_2_theta(R):
+    theta = np.arctan2(-R[0, 1], R[0, 0])
+    return theta
+
+
 # Converts a quaternion into euler angles, using the euler order described in dse_constants.py
 def quat2eul(quat):
     r = R.from_quat(quat)
@@ -123,7 +129,7 @@ def state_12D_to_6D(x_12D):
 # Expects a pose in the form: x, y, z, w
 def state_from_pose(pose):
     euler_orientation = quat_from_pose2eul(pose.orientation)
-    x = np.array([pose.position.x, pose.position.y, pose.position.z, euler_orientation])[:, None]
+    x = np.array([pose.position.x, pose.position.y, pose.position.z, euler_orientation[0], euler_orientation[1], euler_orientation[2]])[:, None]
     return x
 
 
@@ -240,6 +246,14 @@ def pose_array_from_measurement(pose_array, z, dim_obs):
             pose_array.poses.append(pose_from_measurement(x_i))
 
     return pose_array
+
+
+# Grab the relevant chunk from the input matrix
+def sub_matrix(matrix, ids, id, size):
+    i = np.where(ids == id)[0][0]
+    i_min = i * size
+    i_max = i_min + size
+    return matrix[i_min:i_max, i_min:i_max]
 
 
 # Fill in a multi-array ROS message type with a 2D input array
@@ -957,3 +971,44 @@ def get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_s
             array_i[i] = master_i
 
     return array_ids, array_Y, array_y, array_I, array_i
+
+
+def state_to_xyzypr(state):
+    state = state[:, 0]
+    if len(state) == 6:
+        output = np.zeros(6)
+        output[0:2] = state[0:2]
+        output[5] = state[2]
+    else:
+        output = state[0:6]
+    return output
+
+
+def state_cov_to_covariance_matrix(cov):
+    if np.shape(cov)[0] == 6:
+        output_3D = np.zeros((6, 6))
+        output_3D[0:2, 0:2] = cov[0:2, 0:2]
+        output_3D[0:2, 5] = cov[0:2, 2]
+        output_3D[5, 0:2] = cov[2, 0:2]
+        output_3D[5, 5] = cov[2, 2]
+    else:
+        output_3D = cov[0:6, 0:6]
+    return output_3D
+
+
+def rotate_covariance_xyzypr_state(cov, state):
+    cov_rot = np.zeros((6, 6))
+    r = R.from_euler(dse_constants.EULER_ORDER, state[3:6])
+    rotm = r.as_dcm()
+    cov_pos = cov[0:3, 0:3]
+    cov_pos = rotm.dot(cov_pos).dot(rotm.T)
+    cov_rot[0:3, 0:3] = cov_pos
+    cov_rot[3:6, 3:6] = cov[3:6, 3:6]
+    return cov_rot
+
+
+def covariance_to_ros_covariance(cov):
+    ros_cov = np.zeros(36, dtype=np.float64)
+    for i in range(6):
+        ros_cov[6*i : 6*(i+1)] = cov[i, :]
+    return ros_cov

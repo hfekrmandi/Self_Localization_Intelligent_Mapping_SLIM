@@ -3,9 +3,11 @@ from __future__ import print_function
 import roslib
 import sys
 import rospy
+import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 import time
+from geometry_msgs.msg import PoseArray
 from geometry_msgs.msg import PoseArray
 from geometry_msgs.msg import Pose
 from dse_msgs.msg import PoseMarkers
@@ -23,31 +25,29 @@ import dse_lib
 import dse_constants
 roslib.load_manifest('dse_simulation')
 
+# x vs. y plot
+#   true x
+#       tag[state[]]. extendable array for each tag
+#   true y
+#   x estimated by each agent
+#       agent[tag[state[]]]. extendable array for each tag, for each agent
+#   y estimated by each agent
+#   estimated covariances
 
-class information_filter:
+class plot_simulation_with_cov:
 
     # Define initial/setup values
     def __init__(self):
 
         # Get parameters from launch file
-        self.ros_prefix = rospy.get_param('~prefix')
+        self.ros_prefixes = rospy.get_param('~prefix')
         if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
             self.ros_prefix = '/' + self.ros_prefix
         self.this_agent_id = rospy.get_param('~id')
         self.dim_state = rospy.get_param('~dim_state')
 
-        # self.ros_prefix = '/tb3_0'
-        # self.this_agent_id = 5
-        # self.dim_state = 6
-
-        self.camera_pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
-        self.python_true_sub = rospy.Subscriber(self.ros_prefix + "/dse/python_pose_true", PoseMarkers, self.pthn_true_callback)
-        self.inf_results_sub = rospy.Subscriber(self.ros_prefix + "/dse/inf/results", InfFilterResults, self.results_callback)
-        self.meas_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/measurement", PoseArray, queue_size=10)
-        self.pthn_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/python_true", PoseArray, queue_size=10)
-
-        self.est_ids = []
-        self.est_vis_pubs = []#rospy.Publisher(self.ros_prefix + "/dse/vis/estimates", PoseArray, queue_size=10)
+        self.meas_vis_sub = rospy.Subscriber(self.ros_prefix + "/dse/vis/measurement", PoseArray, self.meas_vis_callback)
+        self.est_vis_sub = rospy.Subscriber(self.ros_prefix + "/dse/vis/estimates", PoseArray, self.est_vis_callback)
 
         if self.dim_state == 6:
             self.dim_obs = 3
@@ -62,8 +62,19 @@ class information_filter:
         self.gzbo_ref_obj_state = None
         self.pthn_ref_obj_state = None
 
+        # Slowly animates the configuration and workspace plots for a device with:
+        # two angles t1 and t2 in radians
+        # x-y coordinates in cm
+        self.time_permanent = []
+        self.est_1_xyt_permanent = []
+        self.est_1_covar_permanent = []
+        self.est_2_xyt_permanent = []
+        self.est_2_covar_permanent = []
+        self.est_3_xyt_permanent = []
+        self.est_3_covar_permanent = []
+
     # Create pose_array for measurement data
-    def measurement_callback(self, data):
+    def meas_vis_callback(self, data):
         poses = PoseArray()
         poses.poses = data.pose_array.poses
         poses.header.stamp = rospy.Time.now()
@@ -99,36 +110,32 @@ class information_filter:
         estimated_ids, estimated_states = dse_lib.relative_states_from_global_3D(self.this_agent_id, inf_id_list,
                                                                                  self.inf_x, self.dim_state, self.dim_obs)
         poses = dse_lib.pose_array_from_state(poses, estimated_states, self.dim_state, self.dim_obs)
+        self.est_vis_pub.publish(poses)
 
-        for id in inf_id_list:
-            if id not in self.est_ids:
-                self.est_ids.append(id)
-                self.est_vis_pubs.append(rospy.Publisher(self.ros_prefix + "/dse/vis/estimates/" + str(id), PoseArray, queue_size=10))
+        self.x_permanent.append(x)
+        self.y_permanent.append(y)
+        self.x_check_permanent.append(x_check)
+        self.y_check_permanent.append(y_check)
+        self.t1_permanent.append(theta_1)
+        self.t2_permanent.append(theta_2)
 
-        for id in estimated_ids:
-            i = np.where(estimated_ids == id)[0][0]
-            j = self.est_ids.index(id)
+        plt.subplot(211)
+        plt.plot(t1_permanent, t2_permanent, '-', lw=2)
+        plt.xlim(-2 * np.pi, 2 * np.pi)
+        plt.ylim(-2 * np.pi, 2 * np.pi)
+        plt.xlabel('theta 1 (rad)')
+        plt.ylabel('theta 2 (rad)')
+        plt.title('Configuration space')
+        plt.grid(True)
 
-            i_min = i * self.dim_state
-            i_max = i_min + self.dim_state
-            mean = dse_lib.state_to_xyzypr(estimated_states[i_min:i_max])
-
-            cov = dse_lib.sub_matrix(inf_P, estimated_ids, id, self.dim_state)
-            cov = dse_lib.state_cov_to_covariance_matrix(cov)
-            cov = dse_lib.rotate_covariance_xyzypr_state(cov, mean)
-
-            estimates = np.random.multivariate_normal(mean, cov, 50)
-            poses.poses = []
-            for est in estimates:
-                poses.poses.append(dse_lib.pose_from_state(est[:, None]))
-
-            self.est_vis_pubs[j].publish(poses)
+        plt.show(block=False)
+        plt.pause(0.001)
 
 
 def main(args):
 
-    rospy.init_node('dse_gazebo_visualization_node', anonymous=True)
-    imf = information_filter()
+    rospy.init_node('plot_simulation_with_cov_node', anonymous=True)
+    imf = plot_simulation_with_cov()
     try:
         rospy.spin()
     except KeyboardInterrupt:

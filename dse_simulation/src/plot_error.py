@@ -7,6 +7,7 @@ import numpy as np
 import datetime
 import time
 from geometry_msgs.msg import PoseArray
+from geometry_msgs.msg import PoseArray
 from geometry_msgs.msg import Pose
 from dse_msgs.msg import PoseMarkers
 from std_msgs.msg import Float64MultiArray
@@ -24,7 +25,7 @@ import dse_constants
 roslib.load_manifest('dse_simulation')
 
 
-class information_filter:
+class plot_simulation_with_cov:
 
     # Define initial/setup values
     def __init__(self):
@@ -36,18 +37,12 @@ class information_filter:
         self.this_agent_id = rospy.get_param('~id')
         self.dim_state = rospy.get_param('~dim_state')
 
-        # self.ros_prefix = '/tb3_0'
-        # self.this_agent_id = 5
-        # self.dim_state = 6
-
         self.camera_pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
         self.python_true_sub = rospy.Subscriber(self.ros_prefix + "/dse/python_pose_true", PoseMarkers, self.pthn_true_callback)
         self.inf_results_sub = rospy.Subscriber(self.ros_prefix + "/dse/inf/results", InfFilterResults, self.results_callback)
         self.meas_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/measurement", PoseArray, queue_size=10)
         self.pthn_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/python_true", PoseArray, queue_size=10)
-
-        self.est_ids = []
-        self.est_vis_pubs = []#rospy.Publisher(self.ros_prefix + "/dse/vis/estimates", PoseArray, queue_size=10)
+        self.est_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/estimates", PoseArray, queue_size=10)
 
         if self.dim_state == 6:
             self.dim_obs = 3
@@ -99,30 +94,7 @@ class information_filter:
         estimated_ids, estimated_states = dse_lib.relative_states_from_global_3D(self.this_agent_id, inf_id_list,
                                                                                  self.inf_x, self.dim_state, self.dim_obs)
         poses = dse_lib.pose_array_from_state(poses, estimated_states, self.dim_state, self.dim_obs)
-
-        for id in inf_id_list:
-            if id not in self.est_ids:
-                self.est_ids.append(id)
-                self.est_vis_pubs.append(rospy.Publisher(self.ros_prefix + "/dse/vis/estimates/" + str(id), PoseArray, queue_size=10))
-
-        for id in estimated_ids:
-            i = np.where(estimated_ids == id)[0][0]
-            j = self.est_ids.index(id)
-
-            i_min = i * self.dim_state
-            i_max = i_min + self.dim_state
-            mean = dse_lib.state_to_xyzypr(estimated_states[i_min:i_max])
-
-            cov = dse_lib.sub_matrix(inf_P, estimated_ids, id, self.dim_state)
-            cov = dse_lib.state_cov_to_covariance_matrix(cov)
-            cov = dse_lib.rotate_covariance_xyzypr_state(cov, mean)
-
-            estimates = np.random.multivariate_normal(mean, cov, 50)
-            poses.poses = []
-            for est in estimates:
-                poses.poses.append(dse_lib.pose_from_state(est[:, None]))
-
-            self.est_vis_pubs[j].publish(poses)
+        self.est_vis_pub.publish(poses)
 
 
 def main(args):
