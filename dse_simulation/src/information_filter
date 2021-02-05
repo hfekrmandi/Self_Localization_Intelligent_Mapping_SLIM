@@ -216,6 +216,7 @@ class information_filter:
         inf_partial = InfFilterPartials()
         inf_partial.sender_id = self.this_agent_id
         inf_partial.ids = inf_id_list
+        inf_partial.obs_ids = inf_id_obs
         inf_partial.inf_matrix_prior = dse_lib.multi_array_2d_input(inf_Y, inf_partial.inf_matrix_prior)
         inf_partial.inf_vector_prior = dse_lib.multi_array_2d_input(inf_y, inf_partial.inf_vector_prior)
         inf_partial.obs_matrix = dse_lib.multi_array_2d_input(inf_I, inf_partial.obs_matrix)

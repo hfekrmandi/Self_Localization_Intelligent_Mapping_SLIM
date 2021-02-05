@@ -24,8 +24,11 @@ Your directories should look like:
 			- Autonomous-GNC-MAS
 			- dse_msgs
 			- dse_simulation
+			- dse_simulation_gazebo
+			- dse_simulation_python
+			- dse_simulation_real
+			- dse_turtlebot_descriptions
 			- README.md
-		- CMakeLists.txt
 		- tureltbot3
 		- turtlebot3_msgs
 		- turtlebot3_simulations
@@ -108,3 +111,31 @@ Debugging the code -
 Other files - 
 - src/dse_leb.py
 	- Library of functions for computing R, H, z, F, Q...
+
+- Autonomous-GNC-MAS
+	ROS Meta-package folder, nothing important
+- dse_msgs
+	custom ROS messages
+- dse_simulation
+	Most everything
+	- documentation
+		rosgraphs and other documents showing the code flow
+	- launch
+		files to run worlds or simulations
+	- media
+		custom materials and models used in simulations
+	- rviz
+		rviz configs, usually one per simulation that preselects topics of interest
+	- src
+		All of the python code files. Each ROS node is its own file here 
+	- world
+		Simulation world files. Defines what is in the environment
+- dse_simulation_gazebo
+	Nothing yet, the idea is this holds gazebo-specific files and simulations
+- dse_simulation_python
+	Nothing yet, the idea is this holds lower-level python only simulations
+- dse_simulation_real
+	Nothing yet, the idea is this holds code for running on a real turtlebot
+- dse_turtlebot_descriptions
+	files for custom turtlebots with Aruco tags mounted on top of them
+- README.md

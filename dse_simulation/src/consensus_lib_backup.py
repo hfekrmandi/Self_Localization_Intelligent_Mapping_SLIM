@@ -196,39 +196,41 @@ def apply_comm_model_distance(SIM, agents, threshold):
 #         agent_groups[num_groups + 1] = group
 #         num_groups = num_groups + 1
 
-# INPUT -
-#   The 4 information variables from each agent in this group
-#   The current consensus step number
-#   The total number of consensus steps
-# RETURNS -
-#   The updated 4 information variables from each agent in this group
-#
-# Algorithm
-#   Create an undirected communication adjacency matrix for this group
-#   create a graph based on this adjacency matrix
-#   for each agent in thr group:
-#       for each agent this agent can communicate with (from adjacency matrix):
-#           Store their prior
-#       Compute CI weights based on those priors
-#       Apply those weights ad compute this agent's new y, Y
-#       for each agent in the group: # This includes the agent itself
-#           i, I += (i, I)*graph.p
-#       y, Y = y, Y + (percentage of consensus steps run) * (i, I)
+
+# Create a graph from a group of agents
+def create_graph(agents):
+    adj = np.eye(numel(agents))
+
+    id_to_index = []
+    for i in range(np.shape(agents)[0]):
+        id_to_index[i] = agents[i].objectID
+
+    for i in range(np.shape(agents)[0]):
+        for j in agents[i].memory_id_comm:
+            adj[i, find(j == id_to_index)] = 1
+
+    if size(adj, 1) == 1 & size(adj, 2) == 1:
+        tmp = 0
+
+    graph = generate_graph(adj)
+
+    return graph, id_to_index
+
+
 
 # Perform one consensus step
-def consensus_step(array_ids, array_Y, array_y, array_I, array_i, array_comm, dim_state, step, num_steps):
+def consensus_group(agents, step, num_steps):
     # Perform consensus computations
 
     ## Initialize Graph
     # Generate graph
     # Create adjacency matrix
     # use generate_graph function
-    adj = apply_comm_model_distance()
-    graph_p, graph_d = generate_graph(adj)
-    size_comp, nComponents, members = networkComponents(p)
+    [graph, id_to_index] = create_graph(agents)
+    size_comp = networkComponents(graph.p)
 
     ## Compute and store consensus variables
-    for i in range(np.shape(array_Y)[0]):
+    for i in range(np.shape(agents)[0]):
 
         # Grab variables from neighboring agents
         Y_local = []
@@ -241,13 +243,13 @@ def consensus_step(array_ids, array_Y, array_y, array_I, array_i, array_comm, di
             y_local[:,:, j] = (agent.memory_y)
 
         # Compute and apply CI weights
-        [weights_ci, Y_prior, y_prior] = calc_ci_weights_simple(Y_local, y_local, 'det')
+        [weights_ci, Y_prior, y_prior] = calc_ci_weights_ver3(Y_local, y_local, 'det')
 
         delta_I = zeros(size(agents[1].memory_I))
         delta_i = zeros(size(agents[1].memory_i))
 
         for j in range(np.shape(agents)[0]):
-            p_jk = graph_p[i, j]
+            p_jk = graph.p[i, j]
 
             delta_I = delta_I + p_jk * agents[j].memory_I
             delta_i = delta_i + p_jk * agents[j].memory_i
@@ -256,25 +258,18 @@ def consensus_step(array_ids, array_Y, array_y, array_I, array_i, array_comm, di
         Y = Y_prior + ratio * size_comp[i] * delta_I
         y = y_prior + ratio * size_comp[i] * delta_i
 
-        # consensus_data[i].Y = Y
-        # consensus_data[i].y = y
-        # consensus_data[i].Y_prior = Y_prior
-        # consensus_data[i].y_prior = y_prior
-        # consensus_data[i].delta_I = delta_I
-        # consensus_data[i].delta_i = delta_i
+        consensus_data[i].Y = Y
+        consensus_data[i].y = y
+        consensus_data[i].Y_prior = Y_prior
+        consensus_data[i].y_prior = y_prior
+        consensus_data[i].delta_I = delta_I
+        consensus_data[i].delta_i = delta_i
 
-    return # consensus_data
+    return consensus_data
 
 
 def consensus(agent_groups):
     num_steps = 20
-    adj = apply_comm_model_distance()
-    [p, d] = generate_graph(adj)
-    graph = [adj, p, d]
-    size_comp, nComponents, members = networkComponents(p)
-    for i in range(num_steps):
-        consensus_step(agent_groups[group_num], i, num_steps, graph, size_comp)
-
     for group_num in range(np.shape(agent_groups)[0]):
         if numel(agent_groups[group_num]) == 1:
             agent_groups[group_num].memory_Y = agent_groups[group_num].memory_Y + agent_groups[group_num].memory_I
@@ -292,7 +287,7 @@ def consensus(agent_groups):
 
             # Compute the remaining consensus steps
             for step in range(2, num_steps):
-                consensus_data[step, group_num] = consensus_step(agent_groups[group_num], step, num_steps)
+                consensus_data[step, group_num] = consensus_group(agent_groups[group_num], step, num_steps)
 
             # After all agents' variables have been computed, store them
             for i in range(np.shape(consensus_data[step, group_num])[0]):
@@ -356,86 +351,93 @@ def position_from_id(agent, id):
 #   entry of which is a membership list for that component, sorted,
 #   descending by component size.
 #
+# Example: (uncomment and copy and paste into MATLAB command window)
+# # Generate a 1000 node network adjacency matrix, A
+# A = floor(1.0015*rand(1000,1000)) A=A+A' A(A==2)=1 A(1:1001:end) = 0
+# # Call networkComponents function
+# [nComponents,sizes,members] = networkComponents(A)
+# # get the size of the largest component
+# sizeLC = sizes(1)
+# # get a network adjacency matrix for ONLY the largest component
+# LC = A(members[1],members[1])
 
 def networkComponents(A):
     # Number of nodes
-    N = np.shape(A)[0]
+    N = size(A,1)
     # Remove diagonals
-    np.fill_diagonal(A, 0)
+    A[1:N+1:end] = 0
     # make symmetric, just in case it isn't
-    A = np.add(A, A.T)
+    A=A+A'
     # Have we visited a particular node yet?
-    isDiscovered = np.zeros(N)
+    isDiscovered = zeros(N,1)
     # Empty members cell
     members = []
     # check every node
     for n in range(N):
         if not isDiscovered[n]:
             # started a new group so add it to members
-            members.append([n])
+            members[end+1] = n
             # account for discovering n
             isDiscovered[n] = 1
             # set the ptr to 1
-            ptr = 0
-            while (ptr < len(members[-1])):
+            ptr = 1
+            while (ptr <= length(members[end])):
                 # find neighbors
-                nbrs = np.array(np.where(A[:, members[-1][ptr]] != 0))
+                nbrs = find(A[:, members[end](ptr)])
                 # here are the neighbors that are undiscovered
-                newNbrs = nbrs[isDiscovered[nbrs] == 0]
+                newNbrs = nbrs[isDiscovered[nbrs]==0]
                 # we can now mark them as discovered
                 isDiscovered[newNbrs] = 1
                 # add them to member list
-                members[-1].extend(newNbrs)
+                members[end][end+1:end+length(newNbrs)] = newNbrs
                 # increment ptr so we check the next member of this component
-                ptr += 1
+                ptr = ptr+1
 
     # number of components
-    nComponents = len(members)
-    size_group = np.zeros(N)
+    nComponents = length(members)
     for n in range(nComponents):
         # compute sizes of components
         group_n = members[n]
-        for j in range(len(group_n)):
-            size_group[group_n[j]] = len(group_n)
+        for j in range(length(group_n)):
+            size_group[group_n[j]] = numel(group_n)
         #     sizes(n) = length(members[n])
 
     return size_group, nComponents, members
 
-# Computes the consensus weights (p)
-# and the inclusive degree of each node (d)
-#   It computes the degree of each node and adds 1, assuming the graph is not self-connected at the start
-def generate_graph(adj):
+
+def generate_graph(Adj):
     # This function accepts an adjecancy matrix where degree of each
     # node is equal to 1 + number of its neighbours. That is, all agents
     # are connected to themselves as well.
 
     #  number of nodes ( = |v|)
-    nv = np.shape(adj)[0]
+    nv = size(Adj, 2)
 
-    # Remove diagonals
-    np.fill_diagonal(adj, 0)
+    # Assign the graph adjecancy matrix
+    G.Adj = Adj
 
-    d = np.zeros(nv)
     # Calculate inclusive node degrees
-    for i in range(nv):
-        d[i] = np.sum(adj[i, :]) + 1
+    for i in range(nv)
+        G.d[i] = sum(G.Adj[i, :]) + 1
 
     # Calculate weights for MHMC distributed averaging
     # This is slightly different from the formula used in the paper
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.161.3893&rep=rep1&type=pdf
-    p = np.zeros(np.shape(adj))
     for i in range(nv):
         for j in range(nv):
-            if adj[i, j] != 0:
+            if G.Adj[i, j] != 0:
                 if i != j:
-                    p[i, j] = min(1 / d[i], 1 / d[j])
+                    G.p[i, j] = min(1 / G.d[i], 1 / G.d[j])
             else:
-                p[i, j] = 0
+                G.p[i, j] = 0
 
     for i in range(nv):
-        p[i, i] = 1 - np.sum(p[i, :])
+        try:
+            G.p[i, i] = 1 - sum(G.p[i, :])
+        except:
+            tmp = 0
 
-    return p, d
+    return G
 
 # Not required - As long as weights add to 1, it's fine. ex: 1/n
 # Optimization
@@ -443,116 +445,97 @@ def generate_graph(adj):
 #   local_inf_vec - Information vectors
 #   method_ - string defining the method (determinant, trace...)
 # scipy.optimize.minimize
-def calc_ci_weights_simple(S1, local_inf_vec, method_):
-    n_agents = np.shape(local_inf_vec)[0]
+def calc_ci_weights_ver3(S1, local_inf_vec, method_):
+    # Number of covariance matrices 
+    nCovSamples = size(S1, 3)
+
+    # Generate a random initialize weight and normalize it so 
+    # it sums up to 1.
+    x0 = rand(nCovSamples, 1)
+    x0 = x0 ./ sum(x0)
+
+    # Thos constraint ensures that the sun of the weights is 1
+    Aeq = ones(size(x0))'
+    beq = 1
+
+    # Weights belong to the interval [0,1]
+    lb = zeros(size(x0))'
+    ub = ones(size(x0))'
+    A = []
+    b = []
+    nonlcon = []
+
+    if verLessThan('matlab', '8.4'):
+        options = optimset('Algorithm', 'sqp')
+
+        if strcmp(method_, 'tr'):
+            x = fmincon(@cost_ci_tr, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
+        elif strcmp(method_, 'det'):
+            x = fmincon(@cost_ci_det, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
+
+    else:
+        options = optimoptions('fmincon', 'Display', 'none', 'Algorithm', 'sqp')
+
+        if strcmp(method_, 'tr'):
+            x = fmincon(@cost_ci_tr, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
+        elif strcmp(method_, 'det'):
+            x = fmincon(@cost_ci_det, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
 
     # CI weghts
-    weights_ci = np.full(n_agents, 1.0 / n_agents)
+    weights_ci = x
+
+    # Normalize just in case
+    if sum(weights_ci) > 1:
+        weights_ci = weights_ci ./ sum(weights_ci)
 
     # Now that we have the weights, calculate w1*I1+...+wn*In
-    inf_vec = np.zeros(np.shape(local_inf_vec[0]))
-    for i in range(len(weights_ci)):
-        inf_vec = np.add(inf_vec, weights_ci[i] * local_inf_vec[i])
+    inf_vect = special_dot_sum(weights_ci, local_inf_vec, 0)
+    inf_mat = calc_inf_ci(x)
 
-    inf_mat = np.zeros(np.shape(S1[0]))
-    for i in range(len(weights_ci)):
-        inf_mat = np.add(inf_mat, weights_ci[i] * S1[i])
-    # Ensure that the matrix is symmetric
-    inf_mat = 0.5 * np.sum(inf_mat, inf_mat.T)
-
-    return weights_ci, inf_mat, inf_vec
-
-# def calc_ci_weights_ver3(S1, local_inf_vec, method_):
-#     # Number of covariance matrices
-#     nCovSamples = size(S1, 3)
-#
-#     # Generate a random initialize weight and normalize it so
-#     # it sums up to 1.
-#     x0 = rand(nCovSamples, 1)
-#     x0 = x0 ./ sum(x0)
-#
-#     # Thos constraint ensures that the sun of the weights is 1
-#     Aeq = ones(size(x0))'
-#     beq = 1
-#
-#     # Weights belong to the interval [0,1]
-#     lb = zeros(size(x0))'
-#     ub = ones(size(x0))'
-#     A = []
-#     b = []
-#     nonlcon = []
-#
-#     if verLessThan('matlab', '8.4'):
-#         options = optimset('Algorithm', 'sqp')
-#
-#         if strcmp(method_, 'tr'):
-#             x = fmincon(@cost_ci_tr, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
-#         elif strcmp(method_, 'det'):
-#             x = fmincon(@cost_ci_det, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
-#
-#     else:
-#         options = optimoptions('fmincon', 'Display', 'none', 'Algorithm', 'sqp')
-#
-#         if strcmp(method_, 'tr'):
-#             x = fmincon(@cost_ci_tr, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
-#         elif strcmp(method_, 'det'):
-#             x = fmincon(@cost_ci_det, x0, A, b, Aeq, beq, lb, ub, nonlcon, options)
-#
-#     # CI weghts
-#     weights_ci = x
-#
-#     # Normalize just in case
-#     if sum(weights_ci) > 1:
-#         weights_ci = weights_ci ./ sum(weights_ci)
-#
-#     # Now that we have the weights, calculate w1*I1+...+wn*In
-#     inf_vect = special_dot_sum(weights_ci, local_inf_vec, 0)
-#     inf_mat = calc_inf_ci(x)
-#
-#     return weights_ci, inf_mat, inf_vect
+    return weights_ci, inf_mat, inf_vect
 
 
 # Trace cost function as the objective function
-# def cost_ci_tr(x):
-#     information_matrix = zeros(size(S1[:, :, 1]))
-#
-#     for i_tr in range(length(x)):
-#         information_matrix = information_matrix + x[i_tr, 1] * (S1[:, :, i_tr])
-#
-#     # Make the information matrix symetric in case numerical errors during the summation calculation
-#     information_matrix = 0.5 * (information_matrix + information_matrix')
-#
-#     cost_tr = trace(np.linalg.inv(information_matrix))
-#     return cost_tr
+def cost_ci_tr(x):
+    information_matrix = zeros(size(S1[:, :, 1]))
+
+    for i_tr in range(length(x)):
+        information_matrix = information_matrix + x[i_tr, 1] * (S1[:, :, i_tr])
+
+    # Make the information matrix symetric in case numerical errors during the summation calculation
+    information_matrix = 0.5 * (information_matrix + information_matrix')
+
+    cost_tr = trace(np.linalg.inv(information_matrix))
+    return cost_tr
 
 
-# # Determinant cost function
-# def cost_ci_det(x):
-#     information_matrix = zeros(size(S1[:, :, 1]))
-#
-#     for i_det in range(length(x)):
-#         information_matrix = information_matrix + x[i_det, 1] * (S1[:, :, i_det])
-#
-#     # Make the information matrix symetric in case numerical errors during the summation calculation
-#     information_matrix = 0.5 * (information_matrix + information_matrix')
-#
-#     cost_det = -log(det(information_matrix))
-#
-#     # cost calculation near the singularity.
-#     if isinf(cost_det):
-#         cost_det = log(det(np.linalg.inv(information_matrix)))
-#
-#     return cost_det
-#
-#
-# def calc_inf_ci(x):
-#     information_matrix = zeros(size(S1[:, :, 1]))
-#
-#     for i_det in range(length(x)):
-#         information_matrix = information_matrix  +x[i_det, 1] * (S1[:, :, i_det])
-#
-#     # Make the information matrix symetric in case numerical errors during the summation calculation
-#     information_matrix = 0.5 * (information_matrix + information_matrix')
-#
-#     return information_matrix
+# Determinant cost function
+def cost_ci_det(x):
+    information_matrix = zeros(size(S1[:, :, 1]))
+
+    for i_det in range(length(x)):
+        information_matrix = information_matrix + x[i_det, 1] * (S1[:, :, i_det])
+
+    # Make the information matrix symetric in case numerical errors during the summation calculation
+    information_matrix = 0.5 * (information_matrix + information_matrix')
+
+    cost_det = -log(det(information_matrix))
+
+    # cost calculation near the singularity.
+    if isinf(cost_det):
+        cost_det = log(det(np.linalg.inv(information_matrix)))
+
+    return cost_det
+
+
+def calc_inf_ci(x):
+    information_matrix = zeros(size(S1[:, :, 1]))
+
+    for i_det in range(length(x)):
+        information_matrix = information_matrix  +x[i_det, 1] * (S1[:, :, i_det])
+
+    # Make the information matrix symetric in case numerical errors during the summation calculation
+    information_matrix = 0.5 * (information_matrix + information_matrix')
+
+    return information_matrix
 

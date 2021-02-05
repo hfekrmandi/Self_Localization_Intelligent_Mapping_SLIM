@@ -3,6 +3,7 @@
 ########################################
 int32 sender_id # ID of the agent that sent this message
 int32[] ids # Array of known IDs
+int32[] obs_ids # Array of IDs observed at this time step
 std_msgs/Float64MultiArray inf_matrix_prior
 std_msgs/Float64MultiArray inf_vector_prior
 std_msgs/Float64MultiArray obs_matrix
