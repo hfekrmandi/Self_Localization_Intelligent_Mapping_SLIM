@@ -13,6 +13,7 @@ from dse_msgs.msg import InfFilterPartials
 from dse_msgs.msg import InfFilterResults
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
+import copy
 
 import dse_constants
 
@@ -110,91 +111,19 @@ def get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_s
 
 # Update the momory_id_comm list in each agent to include each agent they
 # can communicate with (based on a communication model).
-def apply_comm_model(SIM, agents, comm_list):
-
-    # Apply communication model and create list of agents each agent can communicate with
-    # Current communication model is the same as the observation model
-    agents_arr = []
-    for id in range(np.shape(agents)[0]):
-        agent = agents[id]
-        if SIM.OBJECTS(agent.objectID).type == 1:
-            agents_arr = [agents_arr, agent]
-
-    for index in range(np.shape(agents_arr)[0]):
-        agent = agents_arr(index)
-        agent_comm_list = cell2mat(comm_list[index])
-        agent.memory_id_comm = agent_comm_list
-
-
-# Update the momory_id_comm list in each agent to include each agent they
-# can communicate with.
-def apply_comm_model_distance(SIM, agents, threshold):
-
-    agents_arr = []
-    for id in range(np.shape(agents)[0]):
-        agent = agents[id]
-        if SIM.OBJECTS(agent.objectID).type == 1:
-            agents_arr = [agents_arr, agent]
-
-    for i in range(np.shape(agents_arr)[0]):
-        agents_arr[i].memory_id_comm = []
-        for j in range(np.shape(agents_arr)[0]):
-            if i != j:
-                detect = agents_arr[i].commRadius
-                Xi = SIM.OBJECTS[agents_arr[i].objectID].X
-                Xj = SIM.OBJECTS[agents_arr[j].objectID].X
-                if norm(Xj[1: 3] - Xi[1:3]) <= detect:
-                    agents_arr[i].memory_id_comm = [agents_arr[i].memory_id_comm, j]
-
-#
-# # Break agents up into groups based on communication graph
-# def break_agents_into_groups(SIM, agent_data):
-#     # Split into groups of agents that can communicate with eachother,
-#     # and puts those agents in a group. Continues this along the chain
-#     # until there are no more agents in this group, then finds the other
-#     # isolated groups.
-#
-#     agent_groups = []
-#     num_groups = 0
-#     # While there are still agents to group up
-#     while numel(agent_data) > 0:
-#
-#         # Start with the first remaining agent
-#         group = agent_data[1]
-#         id_obs = group(1).memory_id_comm
-#         new_group = 1
-#         agent_data[1] = []
-#
-#         # while there are new agents in the group
-#         while new_group > 0:
-#
-#             # Get a list of the newly-observed IDs
-#             len = numel(group)
-#             tmp = group[1, len - new_group + 1:len]
-#             id_obs_new = []
-#             for m in range(np.shape(tmp)[0]):
-#                 id_obs_new = [id_obs_new, tmp(m).memory_id_comm]
-#
-#             id_obs_new = sort(unique(id_obs_new))
-#             id_obs_new = setdiff(id_obs_new, id_obs)
-#             id_obs = sort([id_obs, id_obs_new])
-#             new_group = 0
-#             indices = []
-#
-#             # Get the agents with ids matching the observed list
-#             for i in id_obs:
-#                 for j in range(np.shape(agent_data)[0]):
-#                     if agent_data[j].objectID == i:
-#                         group = [group, agent_data[j]]
-#                         new_group = new_group + 1
-#                         indices = [indices, j]
-#
-#             # Remove grouped agents from the general pool
-#             for i in sort(indices, 'descend'):
-#                 agent_data[i] = []
-#
-#         agent_groups[num_groups + 1] = group
-#         num_groups = num_groups + 1
+def apply_comm_model(obs_lists, method_='connected'):
+    if method_ == 'distance':
+        # Get the positions of each agent
+        adj = np.ones((np.shape(obs_lists)[0], np.shape(obs_lists)[0]))
+    elif method_ == 'obs':
+        # Get the positions of each agent
+        # adj = np.zeros((np.shape(obs_lists)[0], np.shape(obs_lists)[0]))
+        # for i in range(np.shape(obs_lists)[0]):
+        #     adj[i, :] = obs_lists[i, :]
+        adj = np.ones((np.shape(obs_lists)[0], np.shape(obs_lists)[0]))
+    else:
+        adj = np.ones((np.shape(obs_lists)[0], np.shape(obs_lists)[0]))
+    return adj
 
 # INPUT -
 #   The 4 information variables from each agent in this group
@@ -206,131 +135,125 @@ def apply_comm_model_distance(SIM, agents, threshold):
 # Algorithm
 #   Create an undirected communication adjacency matrix for this group
 #   create a graph based on this adjacency matrix
-#   for each agent in thr group:
+#   for each agent in the group:
 #       for each agent this agent can communicate with (from adjacency matrix):
 #           Store their prior
 #       Compute CI weights based on those priors
 #       Apply those weights ad compute this agent's new y, Y
 #       for each agent in the group: # This includes the agent itself
 #           i, I += (i, I)*graph.p
-#       y, Y = y, Y + (percentage of consensus steps run) * (i, I)
+#       y, Y = y, Y + (percentage of consensus steps run) * number of agents this agent is connected to * (i, I)
 
 # Perform one consensus step
-def consensus_step(array_ids, array_Y, array_y, array_I, array_i, array_comm, dim_state, step, num_steps):
+def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, array_comm, dim_state, num_steps=20):
     # Perform consensus computations
+    array_ids, array_Y, array_y, array_I, array_i = \
+        get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_state)
 
-    ## Initialize Graph
-    # Generate graph
-    # Create adjacency matrix
-    # use generate_graph function
-    adj = apply_comm_model_distance()
+    # array_comm is lists from oach agent of who they received messages from.
+    # Translate that into a graph ajacency matrix
+    adj = apply_comm_model(array_comm)
+    # Compute MHMC weights
     graph_p, graph_d = generate_graph(adj)
-    size_comp, nComponents, members = networkComponents(p)
+    # Find connected groups, and for each group return the size of each group, the number of groups, and the agents in each group.
+    # For this work, we only use the size of each group
+    size_comp, nComponents, members = networkComponents(graph_p)
 
-    ## Compute and store consensus variables
-    for i in range(np.shape(array_Y)[0]):
+    # Build mapping from agent index to group size
+    group_indices = np.zeros(len(array_Y), dtype=int)
+    for i in range(len(members)):
+        group_indices[members[i]] = i
 
-        # Grab variables from neighboring agents
-        Y_local = []
-        y_local = []
-        idx_neighbors = agents[i].memory_id_comm
+    # Arrays to store values for the next consensus step in
+    final_array_Y = np.zeros(np.shape(array_Y))
+    final_array_y = np.zeros(np.shape(array_y))
+    final_array_I = np.zeros(np.shape(array_I))
+    final_array_i = np.zeros(np.shape(array_i))
 
-        for j in range(np.shape(idx_neighbors)[0]):
-            agent = agent_with_id(agents, idx_neighbors[j])
-            Y_local[:,:, j] = (agent.memory_Y)
-            y_local[:,:, j] = (agent.memory_y)
+    # Compute consensus steps
+    for step in range(num_steps):
+        # For each participating agent
+        for i in range(len(array_Y)):
 
-        # Compute and apply CI weights
-        [weights_ci, Y_prior, y_prior] = calc_ci_weights_simple(Y_local, y_local, 'det')
+            # Grab variables from neighboring agents
+            idx_neighbors_indices = np.where(adj[i, :] != 0)[0]
+            Y_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_Y[0])[0], np.shape(array_Y[0])[1]))
+            y_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_y[0])[0], np.shape(array_y[0])[1]))
 
-        delta_I = zeros(size(agents[1].memory_I))
-        delta_i = zeros(size(agents[1].memory_i))
+            # Add in this agent's values
+            Y_local[-1, :, :] = array_Y[i]
+            y_local[-1, :, :] = array_y[i]
 
-        for j in range(np.shape(agents)[0]):
-            p_jk = graph_p[i, j]
+            for j in range(np.shape(idx_neighbors_indices)[0]):
+                Y_local[j, :, :] = array_Y[idx_neighbors_indices[j]]
+                y_local[j, :, :] = array_y[idx_neighbors_indices[j]]
 
-            delta_I = delta_I + p_jk * agents[j].memory_I
-            delta_i = delta_i + p_jk * agents[j].memory_i
+            # Compute and apply CI weights
+            [weights_ci, Y_prior, y_prior] = calc_ci_weights_simple(Y_local, y_local, 'det')
 
-        ratio = step / num_steps
-        Y = Y_prior + ratio * size_comp[i] * delta_I
-        y = y_prior + ratio * size_comp[i] * delta_i
+            delta_I = np.zeros(np.shape(array_I[0]))
+            delta_i = np.zeros(np.shape(array_i[0]))
 
-        # consensus_data[i].Y = Y
-        # consensus_data[i].y = y
-        # consensus_data[i].Y_prior = Y_prior
-        # consensus_data[i].y_prior = y_prior
-        # consensus_data[i].delta_I = delta_I
-        # consensus_data[i].delta_i = delta_i
+            for j in range(len(array_Y)):
+                p_jk = graph_p[i, j]
 
-    return # consensus_data
+                delta_I = delta_I + p_jk * array_I[j]
+                delta_i = delta_i + p_jk * array_i[j]
+
+            final_array_Y[i] = Y_prior
+            final_array_y[i] = y_prior
+            final_array_I[i] = delta_I
+            final_array_i[i] = delta_i
+
+        array_Y = copy.deepcopy(final_array_Y)
+        array_y = copy.deepcopy(final_array_y)
+        array_I = copy.deepcopy(final_array_I)
+        array_i = copy.deepcopy(final_array_i)
+
+    for i in range(len(array_Y)):
+        final_array_Y[i] = final_array_Y[i] + size_comp[group_indices[i]] * final_array_I[i]
+        final_array_y[i] = final_array_y[i] + size_comp[group_indices[i]] * final_array_i[i]
+
+    return array_ids, final_array_Y, final_array_y
 
 
-def consensus(agent_groups):
-    num_steps = 20
-    adj = apply_comm_model_distance()
-    [p, d] = generate_graph(adj)
-    graph = [adj, p, d]
-    size_comp, nComponents, members = networkComponents(p)
-    for i in range(num_steps):
-        consensus_step(agent_groups[group_num], i, num_steps, graph, size_comp)
-
-    for group_num in range(np.shape(agent_groups)[0]):
-        if numel(agent_groups[group_num]) == 1:
-            agent_groups[group_num].memory_Y = agent_groups[group_num].memory_Y + agent_groups[group_num].memory_I
-            agent_groups[group_num].memory_y = agent_groups[group_num].memory_y + agent_groups[group_num].memory_i
-            agent_groups[group_num].memory_P = np.linalg.inv(agent_groups[group_num].memory_Y)
-            agent_groups[group_num].memory_x = np.linalg.inv(agent_groups[group_num].memory_Y) *agent_groups[group_num].memory_y
-        else:
-            # Compute first consensus step
-            step = 1
-            for i in range(np.shape(agent_groups[group_num])[0]):
-                consensus_data[step, group_num][i].Y_prior = agent_groups[group_num][i].memory_Y
-                consensus_data[step, group_num][i].y_prior = agent_groups[group_num][i].memory_y
-                consensus_data[step, group_num][i].delta_I = agent_groups[group_num][i].memory_I
-                consensus_data[step, group_num][i].delta_i = agent_groups[group_num][i].memory_i
-
-            # Compute the remaining consensus steps
-            for step in range(2, num_steps):
-                consensus_data[step, group_num] = consensus_step(agent_groups[group_num], step, num_steps)
-
-            # After all agents' variables have been computed, store them
-            for i in range(np.shape(consensus_data[step, group_num])[0]):
-                agent_groups[group_num][i].memory_Y = consensus_data[step, group_num][i].Y_prior
-                agent_groups[group_num][i].memory_y = consensus_data[step, group_num][i].y_prior
-                agent_groups[group_num][i].memory_I = consensus_data[step, group_num][i].delta_I
-                agent_groups[group_num][i].memory_i = consensus_data[step, group_num][i].delta_i
-
-            # Store final consensus in each agent
-            for i in range(np.shape(consensus_data[step, group_num])[0]):
-                agent_groups[group_num][i].memory_Y = consensus_data[step, group_num][i].Y
-                agent_groups[group_num][i].memory_y = consensus_data[step, group_num][i].y
-                agent_groups[group_num][i].memory_P = np.linalg.inv(consensus_data[step, group_num][i].Y)
-                agent_groups[group_num][i].memory_x = np.linalg.inv(consensus_data[step, group_num][i].Y) * consensus_data[step, group_num][i].y
-
-    return agent_groups
+# # Given the agents' data, compute the consensus.
+# # Calls consensus_step
+# def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, array_comm, dim_state):
+#     array_ids, array_Y, array_y, array_I, array_i = \
+#         get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_state)
+#
+#     num_steps = 20
+#
+#     # Maybe add check for convergence
+#     for i in range(num_steps):
+#         Y, y = consensus_step(order_to_id, array_ids, array_Y, array_y, array_I, array_i, array_comm, dim_state, i, num_steps)
+#         array_Y = Y
+#         array_y = y
+#
+#     return array_ids, Y, y
 
 
 # function [gt_estimation] = gt(agent_data)
 #     y = y_1 + i_1 + i_2
 # 
-def position_from_id(agent, id):
-
-    x = agent.memory_x
-    index_id = find(id == agent.memory_id_list)
-    index_agent = find(agent.objectID == agent.memory_id_list)
-    dim_state = agent.dim_state
-
-    # Generate indices (to make the assignment setp shorter)
-    meas_low = dim_state * (index_id - 1) + 1
-    meas_high = dim_state * index_id
-    agent_low = dim_state * (index_agent - 1) + 1
-    agent_high = dim_state * index_agent
-
-    rel_pos = x[meas_low:meas_high] - x[agent_low:agent_high]
-    rel_pos = rel_pos[1:2]
-
-    return rel_pos
+# def position_from_id(agent, id):
+#
+#     x = agent.memory_x
+#     index_id = find(id == agent.memory_id_list)
+#     index_agent = find(agent.objectID == agent.memory_id_list)
+#     dim_state = agent.dim_state
+#
+#     # Generate indices (to make the assignment setp shorter)
+#     meas_low = dim_state * (index_id - 1) + 1
+#     meas_high = dim_state * index_id
+#     agent_low = dim_state * (index_agent - 1) + 1
+#     agent_high = dim_state * index_agent
+#
+#     rel_pos = x[meas_low:meas_high] - x[agent_low:agent_high]
+#     rel_pos = rel_pos[1:2]
+#
+#     return rel_pos
 
 # [nComponents,sizes,members] = networkComponents(A)
 #
@@ -423,12 +346,16 @@ def generate_graph(adj):
     # Calculate weights for MHMC distributed averaging
     # This is slightly different from the formula used in the paper
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.161.3893&rep=rep1&type=pdf
+    # The paper's equation is
+    # p[i, j] = 1 / (1 + max(d[i], d[j]))
+    # According the the reference above, if the graph is not bipartite, you can remove the +1
+    # p[i, j] = 1 / max(d[i], d[j])
     p = np.zeros(np.shape(adj))
     for i in range(nv):
         for j in range(nv):
             if adj[i, j] != 0:
                 if i != j:
-                    p[i, j] = min(1 / d[i], 1 / d[j])
+                    p[i, j] = 1 / (1 + max(d[i], d[j]))
             else:
                 p[i, j] = 0
 
@@ -458,7 +385,7 @@ def calc_ci_weights_simple(S1, local_inf_vec, method_):
     for i in range(len(weights_ci)):
         inf_mat = np.add(inf_mat, weights_ci[i] * S1[i])
     # Ensure that the matrix is symmetric
-    inf_mat = 0.5 * np.sum(inf_mat, inf_mat.T)
+    inf_mat = 0.5 * np.add(inf_mat, inf_mat.T)
 
     return weights_ci, inf_mat, inf_vec
 

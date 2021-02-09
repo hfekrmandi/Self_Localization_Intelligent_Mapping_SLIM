@@ -523,76 +523,6 @@ class TestInformationFilterValid(TestInformationFilterCommon):
             self.assertEqual(True, np.allclose(I_11_true[i], array_I[i]))
             self.assertEqual(True, np.allclose(i_11_true[i], array_i[i]))
 
-    # def test_sort_arrays_1(self):
-    #     ##############################################################################
-    #     rospy.loginfo("-D- test_extend_arrays_0")
-    #
-    #     dim_state = 2
-    #
-    #     id_list = np.arange(5)
-    #
-    #     id_list = []
-    #     id_list.append([1, 2, 3])
-    #     id_list.append([2, 1, 3])
-    #     id_list.append([3])
-    #
-    #     # Starting data
-    #     Y_11 = []
-    #     Y_11.append(np.array([[0, 1], [1, 2]]))
-    #     Y_11.append(np.array([[3, 2], [4, 3]]))
-    #     Y_11.append(np.array([[2, 6], [4, 3]]))
-    #
-    #     y_11 = []
-    #     y_11.append(np.array([0, 1])[:, None])
-    #     y_11.append(np.array([3, 2])[:, None])
-    #     y_11.append(np.array([2, 6])[:, None])
-    #
-    #     I_11 = []
-    #     I_11.append(np.array([[0, 1], [1, 2]]))
-    #     I_11.append(np.array([[3, 2], [4, 3]]))
-    #     I_11.append(np.array([[2, 6], [4, 3]]))
-    #
-    #     i_11 = []
-    #     i_11.append(np.array([1, 2, 3])[:, None])
-    #     i_11.append(np.array([3, 2])[:, None])
-    #     i_11.append(np.array([2, 6])[:, None])
-    #
-    #     # True result data
-    #     id_list_true = [0, 1]
-    #
-    #     Y_11_true = []
-    #     Y_11_true.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
-    #     Y_11_true.append(np.array([[6, 8, 5, 4], [4, 3, 6, 5], [1, 0, 3, 2], [2, 1, 4, 3]]))
-    #     Y_11_true.append(np.array([[2, 6, 0, 0], [4, 3, 0, 0], [0, 0, 0.01, 0], [0, 0, 0, 0.01]]))
-    #
-    #     y_11_true = []
-    #     y_11_true.append(np.array([0, 1, 2, 3])[:, None])
-    #     y_11_true.append(np.array([1, 0, 3, 2])[:, None])
-    #     y_11_true.append(np.array([2, 6, 0, 0])[:, None])
-    #
-    #     I_11_true = []
-    #     I_11_true.append(np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]))
-    #     I_11_true.append(np.array([[6, 8, 5, 4], [4, 3, 6, 5], [1, 0, 3, 2], [2, 1, 4, 3]]))
-    #     I_11_true.append(np.array([[2, 6, 0, 0], [4, 3, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]))
-    #
-    #     i_11_true = []
-    #     i_11_true.append(np.array([0, 1, 2, 3])[:, None])
-    #     i_11_true.append(np.array([1, 0, 3, 2])[:, None])
-    #     i_11_true.append(np.array([2, 6, 0, 0])[:, None])
-    #
-    #     array_ids, array_Y, array_y, array_I, array_i = dse_lib.get_sorted_agent_states(
-    #         id_list, Y_11, y_11, I_11, i_11, dim_state)
-    #
-    #     self.assertEqual(True, np.allclose(id_list_true, array_ids[0]))
-    #     self.assertEqual(True, np.allclose(id_list_true, array_ids[1]))
-    #     self.assertEqual(True, np.allclose(id_list_true, array_ids[2]))
-    #
-    #     for i in range(3):
-    #         self.assertEqual(True, np.allclose(Y_11_true[i], array_Y[i]))
-    #         self.assertEqual(True, np.allclose(y_11_true[i], array_y[i]))
-    #         self.assertEqual(True, np.allclose(I_11_true[i], array_I[i]))
-    #         self.assertEqual(True, np.allclose(i_11_true[i], array_i[i]))
-
     def test_centralized_estimator_0(self):
         ##############################################################################
         rospy.loginfo("-D- test_centralized_estimator_0")
@@ -600,10 +530,14 @@ class TestInformationFilterValid(TestInformationFilterCommon):
         state_dim = 6
         num_agents = 3
         inf_ids = np.arange(3)[:, None]
-        inf_Y = np.random.rand(state_dim*num_agents, state_dim*num_agents)
-        inf_y = np.random.rand(state_dim*num_agents, 1)
-        inf_I = np.random.rand(state_dim*num_agents, state_dim*num_agents)
-        inf_i = np.random.rand(state_dim*num_agents, 1)
+        inf_Y = np.eye(state_dim*num_agents)
+        inf_y = np.ones((state_dim*num_agents, 1))
+        inf_I = np.eye(state_dim*num_agents)
+        inf_i = np.ones((state_dim*num_agents, 1))
+        # inf_Y = np.random.rand(state_dim*num_agents, state_dim*num_agents)
+        # inf_y = np.random.rand(state_dim*num_agents, 1)
+        # inf_I = np.random.rand(state_dim*num_agents, state_dim*num_agents)
+        # inf_i = np.random.rand(state_dim*num_agents, 1)
 
         target_Y = np.add(inf_Y, inf_I)
         target_y = np.add(inf_y, inf_i)
@@ -643,6 +577,41 @@ class TestInformationFilterValid(TestInformationFilterCommon):
     #
     #     obs_ids, obs_states = dse_lib.relative_states_from_global_3D(our_id, id_list, states, dim_state, dim_obs)
     #     tmp = 0
+
+    def test_consensus_1_agent(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_consensus_0")
+
+        state_dim = 6
+        num_agents = 3
+        inf_ids = np.arange(3)[:, None]
+        inf_Y = np.random.rand(state_dim*num_agents, state_dim*num_agents)
+        inf_y = np.random.rand(state_dim*num_agents, 1)
+        inf_I = np.random.rand(state_dim*num_agents, state_dim*num_agents)
+        inf_i = np.random.rand(state_dim*num_agents, 1)
+
+        target_Y = np.add(inf_Y, inf_I)
+        target_y = np.add(inf_y, inf_i)
+
+        # Write the consensus variables to the publisher
+        inf_partial = InfFilterPartials()
+        inf_partial.ids = inf_ids
+        inf_partial.inf_matrix_prior = dse_lib.multi_array_2d_input(inf_Y, inf_partial.inf_matrix_prior)
+        inf_partial.inf_vector_prior = dse_lib.multi_array_2d_input(inf_y, inf_partial.inf_vector_prior)
+        inf_partial.obs_matrix = dse_lib.multi_array_2d_input(inf_I, inf_partial.obs_matrix)
+        inf_partial.obs_vector = dse_lib.multi_array_2d_input(inf_i, inf_partial.obs_vector)
+        self.inf_pub.publish(inf_partial)
+
+        # r = rospy.Rate(10)
+        # while not self.got_callback:
+        #     r.sleep()
+
+        # target_Y = np.add(inf_Y, inf_I)
+        # target_y = np.add(inf_y, inf_i)
+        #
+        # self.assertEqual(True, np.allclose(inf_ids, self.inf_id_list))
+        # self.assertEqual(True, np.allclose(target_Y, self.inf_Y))
+        # self.assertEqual(True, np.allclose(target_y, self.inf_y))
 
     def test_networkComponents_0(self):
         ##############################################################################
