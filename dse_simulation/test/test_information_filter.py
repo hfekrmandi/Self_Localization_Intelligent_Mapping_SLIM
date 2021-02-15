@@ -647,6 +647,40 @@ class TestInformationFilterValid(TestInformationFilterCommon):
             self.assertEqual(True, np.allclose(true_members[i], members[i]))
 
 
+    def test_consensus_0(self):
+        ##############################################################################
+        rospy.loginfo("-D- test_consensus_0")
+
+        # INPUTS
+        #   order_to_id = useless, []
+        #   array_ids = array of all known ids, ordered for Y, y, I, i, can be empty
+        #   array_Y = dim_state*n ^ 2, identity
+        #   array_y = dim_state*n, 1s
+        #   array_I = dim_state*n ^ 2, identity
+        #   array_i = dim_state*n, 1s
+        #   array_comm = [[1, 1, 0], [1, 1, 1], [0, 1, 1]]
+        #   self.dim_state = 12
+        # OUTPUTS
+        #   inf_id_list
+        #   inf_Y
+        #   inf_y
+        order_to_id = []
+        array_ids = []
+        array_Y = []
+        array_y = []
+        array_I = []
+        array_i = []
+        for i in range(3):
+            array_Y.append(np.eye(36))
+            array_y.append(np.ones((36, 1)))
+            array_I.append(np.eye(36))
+            array_i.append(np.ones((36, 1)))
+        adj = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]])
+        dim_state = 12
+        inf_id_list, inf_Y, inf_y = consensus_lib.consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, dim_state)
+        print('hi')
+
+
 if __name__ == '__main__':
     rospy.loginfo("-I- test_information_filter started")
     rospy.loginfo("-D- sys.argv: %s" % str(sys.argv))

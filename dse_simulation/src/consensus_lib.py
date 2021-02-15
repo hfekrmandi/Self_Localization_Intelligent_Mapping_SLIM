@@ -145,14 +145,12 @@ def apply_comm_model(obs_lists, method_='connected'):
 #       y, Y = y, Y + (percentage of consensus steps run) * number of agents this agent is connected to * (i, I)
 
 # Perform one consensus step
-def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, array_comm, dim_state, num_steps=20):
+def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, dim_state, num_steps=20):
     # Perform consensus computations
     array_ids, array_Y, array_y, array_I, array_i = \
         get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_state)
 
-    # array_comm is lists from oach agent of who they received messages from.
-    # Translate that into a graph ajacency matrix
-    adj = apply_comm_model(array_comm)
+    # array_comm is lists from each agent of who they received messages from.
     # Compute MHMC weights
     graph_p, graph_d = generate_graph(adj)
     # Find connected groups, and for each group return the size of each group, the number of groups, and the agents in each group.
@@ -280,7 +278,8 @@ def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, array_
 #   descending by component size.
 #
 
-def networkComponents(A):
+def networkComponents(adj):
+    A = copy.deepcopy(adj)
     # Number of nodes
     N = np.shape(A)[0]
     # Remove diagonals
@@ -335,8 +334,8 @@ def generate_graph(adj):
     #  number of nodes ( = |v|)
     nv = np.shape(adj)[0]
 
-    # Remove diagonals
-    np.fill_diagonal(adj, 0)
+    # # Remove diagonals
+    # np.fill_diagonal(adj, 0)
 
     d = np.zeros(nv)
     # Calculate inclusive node degrees
@@ -355,7 +354,7 @@ def generate_graph(adj):
         for j in range(nv):
             if adj[i, j] != 0:
                 if i != j:
-                    p[i, j] = 1 / (1 + max(d[i], d[j]))
+                    p[i, j] = 1 / (max(d[i], d[j]))
             else:
                 p[i, j] = 0
 

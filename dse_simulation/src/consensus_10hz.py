@@ -107,7 +107,9 @@ class hybrid_consensus:
             array_comm = np.ones(np.shape(array_ids))
             np.fill_diagonal(array_comm, 0)
 
-            inf_id_list, inf_Y, inf_y = consensus_lib.consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, array_comm, self.dim_state)
+            # Translate that into a graph ajacency matrix
+            adj = consensus_lib.apply_comm_model(array_comm)
+            inf_id_list, inf_Y, inf_y = consensus_lib.consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, self.dim_state)
 
             for i in range(len(agents)):
                 inf_results = InfFilterResults()
