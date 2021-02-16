@@ -44,11 +44,11 @@
     <rosparam param="objects" subst_value="True"> ["$(arg landmark_1_name)", "$(arg landmark_2_name)", "$(arg landmark_3_name)"]</rosparam>
   </node>
 
-  <!--<node pkg="dse_simulation" type="consensus_10hz.py" name="dse_consensus_node" output="screen">
+  <node pkg="dse_simulation" type="consensus_10hz.py" name="dse_consensus_node" output="screen">
     <param name="n_params" value="3" />
     <rosparam param="objects" subst_value="True"> [$(arg first_tb3), $(arg second_tb3), $(arg third_tb3)]</rosparam>
     <param name="dim_state" type="int" value="$(arg dim_state)" />
-  </node>-->
+  </node>
 
   <group ns = "$(arg first_tb3)">
     <node pkg="dse_simulation" type="aruco_pose_estimation" name="aruco_pose_estimation_node" output="screen">

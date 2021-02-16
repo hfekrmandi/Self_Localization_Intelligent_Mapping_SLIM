@@ -4,16 +4,37 @@ Installing this code -
 Option A: Use your catkin_ws in ~/
 	Henceforth this will be referred to as simulation_ws, just keep that in mind
 Option B: Create a new ROS workspace for this code:
-	Create a folder such as simulation_ws in ~/
-	Cd into it and create a src folder (mkdir src)
-	run catkin_make
+    ...
+    mkdir ~/simulation_ws
+    cd ~/simulation_ws
+    mkdir src
+    catkin_make
+    ...
 
-Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone these 3 turtlebot ROS packages:
-https://github.com/ROBOTIS-GIT/turtlebot3
-https://github.com/ROBOTIS-GIT/turtlebot3_msgs
-https://github.com/ROBOTIS-GIT/turtlebot3_simulations
+Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages:
+...
+cd ~/simulation_ws/src
+git clone https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM
+cd Self_Localization_Intelligent_Mapping_SLIM
+git checkout dev_inf_filter
+cd ..
+git clone https://github.com/ROBOTIS-GIT/turtlebot3
+git clone https://github.com/ROBOTIS-GIT/turtlebot3_msgs
+git clone https://github.com/ROBOTIS-GIT/turtlebot3_simulations
+cd ..
+catkin_make
 
-Then run cd .. (you should be in ~/simulation_ws), and run catkin_make again
+sudo apt update
+sudo apt install python3 pip-python3
+pip3 install scipy numpy
+...
+
+Replace (USER) with your username (you can see it with echo $USER).
+...
+echo "source /home/(USER)/simulation_ws/devel/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+...
+
 Your directories should look like:
 ~/simulation_ws
 	- build
@@ -33,16 +54,14 @@ Your directories should look like:
 		- turtlebot3_msgs
 		- turtlebot3_simulations
 
-Now, each time you open a new terminal make sure to run:
-export TURTLEBOT3_MODEL=waffle_pi
-source ~/simulation_ws/devel/setup.bash
+I also highly recommend installing terminator. It allows you to easily run multiple terminals simultaneously.
+With it open, you can use Ctrl-Shift-E to split a terminal horizontally, and Ctrl-Shift-O to split vertically.
+...
+sudo apt update
+sudo apt install terminator
+...
 
-Now you should be able to run a launch file, ex:
-roslaunch dse_simulation aruco_test.launch
-
-This launch file starts a gazebo world, spawns in a turtlebot and a cube with aruco tags on each face. It also starts a camera node, aruco_pose_estimation, which will use the turtlebot's camera to generate pose estimates of any observed tags. 
-
-Other launch files:
+Some launch files:
 - dse_sim_3_robots.launch - Only 1 robot, but runs an information filter in the background.
 - dse_sim_3_robots_test_plot.launch - Instead of running a gazebo, this file uses a simulation node to create pose estimates for a robot, useful for testing/debugging.
 - dse_sim_3_robots_world_only.launch - Launches the gazebo world and robot, but no other nodes. Useful for testing/debugging individual nodes. 
@@ -109,9 +128,10 @@ Debugging the code -
 	- make sure that in the launch file for each node you have output="screen"
 
 Other files - 
-- src/dse_leb.py
+- src/dse_lib.py
 	- Library of functions for computing R, H, z, F, Q...
 
+Folder structure for this package:
 - Autonomous-GNC-MAS
 	ROS Meta-package folder, nothing important
 - dse_msgs
@@ -127,7 +147,9 @@ Other files -
 	- rviz
 		rviz configs, usually one per simulation that preselects topics of interest
 	- src
-		All of the python code files. Each ROS node is its own file here 
+		All of the python code files. Each ROS node is its own file here
+    - test
+        Files for unit testing
 	- world
 		Simulation world files. Defines what is in the environment
 - dse_simulation_gazebo
