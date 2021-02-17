@@ -2,7 +2,7 @@
 <sdf version="1.5">
   <model name="aruco_marker_0">
     <static>true</static>
-    <link name="link">
+    <link name="base">
       <collision name="collision">
         <geometry>
           <box>
@@ -34,5 +34,26 @@
         </material>
       </visual>
     </link>
+    
+    <joint name="world_joint" type="fixed">
+      <child>base</child>
+      <parent>world</parent>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>0 1 0</xyz>
+        <dynamics>
+          <damping>1.0</damping>
+        </dynamics>
+        <use_parent_model_frame>true</use_parent_model_frame>
+      </axis>
+      <physics>
+        <ode>
+          <cfm_damping>1</cfm_damping>
+        </ode>
+      </physics>
+    </joint>
   </model>
 </sdf>

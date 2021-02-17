@@ -1,33 +1,34 @@
 # Autonomous-GNC-MAS
 
+If you do not have ROS installed, follow the tutorial here for Ubuntu 20.04: http://wiki.ros.org/noetic/Installation/Ubuntu (Note- install ros-noetic-desktop-full, as this code currently requires the gazebo simulator to function). Follow all steps on that page and then continue with this document. 
+If you are planning to use a different ROS version than noetic, you will have to do some work to get python3 working with ROS. It was originally runnning in ROS Melodic, so there's a decent chance. 
+
 Installing this code - 
-Option A: Use your catkin_ws in ~/
-	Henceforth this will be referred to as simulation_ws, just keep that in mind
-Option B: Create a new ROS workspace for this code:
-    ...
-    mkdir ~/simulation_ws
-    cd ~/simulation_ws
-    mkdir src
-    catkin_make
-    ...
+Create a new ROS workspace for this code:
+...
+mkdir ~/simulation_ws
+cd ~/simulation_ws
+mkdir src
+catkin_make
+...
 
 Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages:
 ...
 cd ~/simulation_ws/src
-git clone https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM
-cd Self_Localization_Intelligent_Mapping_SLIM
-git checkout dev_inf_filter
-cd ..
-git clone https://github.com/ROBOTIS-GIT/turtlebot3
-git clone https://github.com/ROBOTIS-GIT/turtlebot3_msgs
-git clone https://github.com/ROBOTIS-GIT/turtlebot3_simulations
+git clone -b dev_inf_filter https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM
+git clone -b noetic-devel https://github.com/ROBOTIS-GIT/turtlebot3
+git clone -b noetic-devel https://github.com/ROBOTIS-GIT/turtlebot3_msgs
+git clone -b noetic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations
+git clone -b melodic-devel https://github.com/ros/robot_state_publisher
 cd ..
 catkin_make
 
 sudo apt update
 sudo apt install python3 pip-python3
-pip3 install scipy numpy
+pip3 install scipy numpy opencv-python opencv-contrib-python
 ...
+
+The robot_state_publisher in noetic doesn't have a tf_prefix option, which is a death sentence for multiple identical agents. To fix this, I have included pulling the melodic version which doesn't have this issue. At this time there is an open PR so maybe it will be fixed later? https://github.com/ros/robot_state_publisher/pull/139
 
 Replace (USER) with your username (you can see it with echo $USER).
 ...
@@ -61,10 +62,11 @@ sudo apt update
 sudo apt install terminator
 ...
 
-Some launch files:
-- dse_sim_3_robots.launch - Only 1 robot, but runs an information filter in the background.
-- dse_sim_3_robots_test_plot.launch - Instead of running a gazebo, this file uses a simulation node to create pose estimates for a robot, useful for testing/debugging.
-- dse_sim_3_robots_world_only.launch - Launches the gazebo world and robot, but no other nodes. Useful for testing/debugging individual nodes. 
+To test this code: 
+...
+roslaunch dse_simulation demo_1_agent.launch
+...
+This will start a gazebo simulation with a single agent and 3 tags lined up in front of it. Each of the 3 tags is seen and estimated by the agent. The estimates are visualized as a sample of 50 vectors from the mean and covariance of the estimate(Will be improved later to a covariance ellipse). The estimates are pretty bad right now, because the camera is locked to 640x480, and the calibration is terrible (should be fixed soon). 
 
 Visualizing in RVIZ
 - Run the launch file dse_sim_3_robots.launch
@@ -78,16 +80,16 @@ Visualizing in RVIZ
 		- It's recommended to change the true pose to green
 
 Node descriptions - 
-- aruco_pose_estimation_node in aruco_pose_estimation
+- aruco_pose_estimation_node in aruco_pose_estimation.py
 	- Inputs: Camera images
 	- Outputs: Poses and IDs of all observed tags
 	- What it does: uses the aruco library to find the pose of each tag, and publishes that pose in the robot's coordinate frame
-- information_filter_node in information_filter
+- information_filter_node in information_filter.py
 	- Inputs: Poses and IDs of all observed tags
 	- Outputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- What it does: Computes a step of the information filter
 	- Reference information filter here
-- direct_estimator_node in direct_estimator
+- direct_estimator_node in direct_estimator.py
 	- Inputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- Outputs: Information filter full estimate (Y_00 and y_00)
 	- What it does: Adds the prior and measurement to create the result, and publishes that. Replaces the consensus since it isn't implemented yet. 
@@ -105,7 +107,7 @@ Debugging the code -
 - In Pycharm (or any debugging python IDE)
 	- In a terminal, source ~/simulation_ws/devel/setup.bash
 	- Then start the IDE from that terminal (Ensures that it knows about ROS libraries/messages
-	- Ensure that you are using Python 2.7
+	- Ensure that you are using your python 3 interpreter (should be at /usr/bin/python3)
 	- Degug any node file as you would a normal Python file. 
 	- You can customize launch files to launch all other nodes, or start others individually through terminals
 - In RVIZ
@@ -129,7 +131,9 @@ Debugging the code -
 
 Other files - 
 - src/dse_lib.py
-	- Library of functions for computing R, H, z, F, Q...
+	- Library of functions mainly for the information filter
+- src/consensus_lib.py
+	- Library of functions for the consensus
 
 Folder structure for this package:
 - Autonomous-GNC-MAS
@@ -159,5 +163,5 @@ Folder structure for this package:
 - dse_simulation_real
 	Nothing yet, the idea is this holds code for running on a real turtlebot
 - dse_turtlebot_descriptions
-	files for custom turtlebots with Aruco tags mounted on top of them
+	files for custom turtlebots with Aruco tags mounted on top of them. Also contains edited turtlebot3 files for changing the camera. 
 - README.md

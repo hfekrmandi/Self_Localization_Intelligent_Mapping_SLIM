@@ -134,8 +134,8 @@ class information_filter:
         P_11 = np.linalg.inv(Y_11)              # Kalman Covariance
         id_list = self.inf_id_list              # list of all known IDs
 
-        print('old: ')
-        print(y_11)
+        # print('old: ')
+        # print(y_11)
         # If we find an ID that isn't currently known, add it
         id_list, Y_11, y_11, P_11, x_11 = dse_lib.extend_arrays(observed_ids, id_list, Y_11, y_11, self.dim_state)
 
@@ -224,9 +224,9 @@ class information_filter:
         inf_partial.obs_matrix = dse_lib.multi_array_2d_input(inf_I, inf_partial.obs_matrix)
         inf_partial.obs_vector = dse_lib.multi_array_2d_input(inf_i, inf_partial.obs_vector)
         self.inf_pub.publish(inf_partial)
-        print('new: ')
-        print(inf_y)
-        print()
+        # print('new: ')
+        # print(inf_y)
+        # print()
 
 
 def main(args):

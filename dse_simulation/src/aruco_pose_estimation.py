@@ -24,12 +24,20 @@ class aruco_pose:
     def __init__(self):
 
         # Get parameters from launch file
-        self.ros_prefix = rospy.get_param('~prefix', '')
+        self.ros_prefix = 'tb3_0'
         if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
             self.ros_prefix = '/' + self.ros_prefix
         # side length of tag in meters
-        self.markerLength = rospy.get_param('~marker_length', 0.22884)
-        self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
+        self.markerLength = 0.1
+        self.cal_file = 'calibrationSave_2.p'
+
+        # # Get parameters from launch file
+        # self.ros_prefix = rospy.get_param('~prefix', '')
+        # if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+        #     self.ros_prefix = '/' + self.ros_prefix
+        # # side length of tag in meters
+        # self.markerLength = rospy.get_param('~marker_length', 0.22884)
+        # self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
 
         # import saved calibration information
         # calibrationSave.p should be correct for laptop webcam
@@ -38,11 +46,11 @@ class aruco_pose:
         para = aruco.DetectorParameters_create()
         para.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
 
-        cap = cv2.VideoCapture(0)
-
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter('output.avi', fourcc, 12.0, (640, 480), False)
-        font = cv2.FONT_HERSHEY_SIMPLEX
+        # cap = cv2.VideoCapture(0)
+        #
+        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        # out = cv2.VideoWriter('output.avi', fourcc, 12.0, (640, 480), False)
+        # font = cv2.FONT_HERSHEY_SIMPLEX
 
         prev_time = datetime.datetime.now()
         times = [0]
@@ -103,7 +111,7 @@ class aruco_pose:
                 ## [  y,     x,   z] respectively
 
             marker_pose = PoseMarkers()
-            marker_pose.ids = ids
+            marker_pose.ids = list(ids.flatten())
             for i in range(len(rvecs)):
                 pose = Pose()
 

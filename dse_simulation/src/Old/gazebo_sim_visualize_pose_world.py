@@ -15,7 +15,7 @@ from std_msgs.msg import MultiArrayDimension
 from dse_msgs.msg import InfFilterResults
 from visualization_msgs.msg import Marker
 from scipy.spatial.transform import Rotation as R
-import tf
+from geometry_msgs.msg import TransformStamped
 from gazebo_msgs.msg import ModelStates
 import tf_conversions
 import tf2_ros
@@ -39,7 +39,7 @@ class visualizer:
         # #self.object_name_pubs = []
         self.tf_broadcasters = []
         for i in range(self.n_params):
-            self.tf_broadcasters.append(tf.TransformBroadcaster())
+            self.tf_broadcasters.append(tf2_ros.TransformBroadcaster())
             self.object_names = rospy.get_param('~objects')
             #self.object_pose_pubs.append(rospy.Publisher("/gazebo_true/Pose/%s" % self.object_names[i], PoseArray, queue_size=10))
             #self.object_name_pubs.append(rospy.Publisher("/gazebo_true/Name/%s" % self.object_names[i], Marker, queue_size=10))
@@ -52,10 +52,25 @@ class visualizer:
         n = len(data.name)
         for i in range(n):
             if data.name[i] in self.object_names:
+                t = TransformStamped()
+                t.header.stamp = rospy.Time.now()
+                t.header.frame_id = 'world'
+                t.child_frame_id = data.name[i]
+                t.transform.translation.x = data.pose[i].position.x
+                t.transform.translation.y = data.pose[i].position.y
+                t.transform.translation.z = data.pose[i].position.z
+                t.transform.rotation.x = data.pose[i].orientation.x
+                t.transform.rotation.y = data.pose[i].orientation.y
+                t.transform.rotation.z = data.pose[i].orientation.z
+                t.transform.rotation.w = data.pose[i].orientation.w
+
                 index = np.where(self.object_names == data.name[i])[0][0]
-                position = (data.pose[i].position.x, data.pose[i].position.y, data.pose[i].position.z)
-                orientation = (data.pose[i].orientation.x, data.pose[i].orientation.y, data.pose[i].orientation.z, data.pose[i].orientation.w)
-                self.tf_broadcasters[index].sendTransform(position, orientation, rospy.Time.now(), data.name[i], 'world')
+                self.tf_broadcasters[index].sendTransform(t)
+
+                # index = np.where(self.object_names == data.name[i])[0][0]
+                # position = (data.pose[i].position.x, data.pose[i].position.y, data.pose[i].position.z)
+                # orientation = (data.pose[i].orientation.x, data.pose[i].orientation.y, data.pose[i].orientation.z, data.pose[i].orientation.w)
+                # self.tf_broadcasters[index].sendTransform(position, orientation, rospy.Time.now(), data.name[i], 'world')
 
 
 def main(args):

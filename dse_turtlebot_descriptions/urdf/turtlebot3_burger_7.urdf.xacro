@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <robot name="turtlebot3_burger_aruco_7" xmlns:xacro="http://ros.org/wiki/xacro">
-  <xacro:include filename="$(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro"/>
+  <xacro:include filename="$(find dse_turtlebot_descriptions)/urdf/turtlebot3_burger.urdf.xacro"/>
   <gazebo reference="aruco_tag_link">
       <material>Gazebo/FlatBlack</material>
   </gazebo>

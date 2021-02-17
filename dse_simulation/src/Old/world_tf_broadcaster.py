@@ -27,9 +27,9 @@ class turtlebot_tf_transforms:
         if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
             self.ros_prefix = '/' + self.ros_prefix
 
-        self.gzbo_link_sub = rospy.Subscriber("/gazebo/link_states", LinkStates, self.gzbo_true_callback)
+        self.gzbo_link_sub = rospy.Subscriber('/gazebo/link_states', LinkStates, self.gzbo_true_callback)
         self.gzbo_model_sub = rospy.Subscriber('/gazebo/model_states', ModelStates, self.handle_turtle_pose, queue_size=10)
-        self.gzbo_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/gazebo_true", PoseArray, queue_size=10)
+        self.gzbo_vis_pub = rospy.Publisher(self.ros_prefix + '/dse/vis/gazebo_true', PoseArray, queue_size=10)
 
         if self.dim_state == 6:
             self.dim_obs = 3

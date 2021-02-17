@@ -295,11 +295,11 @@ def multi_array_2d_output(multi_arr):
 def agent2_to_frame_agent1(agent1_global, agent2_global):
     t1 = agent1_global[0:3]
     r1 = R.from_euler(dse_constants.EULER_ORDER, agent1_global[3:6, 0])
-    R1 = r1.as_dcm()
+    R1 = r1.as_matrix()
 
     t2 = agent2_global[0:3]
     r2 = R.from_euler(dse_constants.EULER_ORDER, agent2_global[3:6, 0])
-    R2 = r2.as_dcm()
+    R2 = r2.as_matrix()
 
     tz = (np.transpose(R1).dot(t2) - np.transpose(R1).dot(t1))[:, 0]
     Rz = np.transpose(R1).dot(R2)
@@ -326,11 +326,11 @@ def agent2_to_frame_agent1_3D(agent1_global, agent2_global):
 def agent2_from_frame_agent1(agent2_in_agent1, agent1_global):
     t1 = agent1_global[0:3]
     r1 = R.from_euler(dse_constants.EULER_ORDER, agent1_global[3:6, 0])
-    R1 = r1.as_dcm()
+    R1 = r1.as_matrix()
 
     t2 = agent2_in_agent1[0:3]
     r2 = R.from_euler(dse_constants.EULER_ORDER, agent2_in_agent1[3:6, 0])
-    R2 = r2.as_dcm()
+    R2 = r2.as_matrix()
 
     tz = (R1.dot(t2) + t1)[:, 0]
     Rz = R1.dot(R2)
@@ -949,7 +949,7 @@ def state_cov_to_covariance_matrix(cov):
 def rotate_covariance_xyzypr_state(cov, state):
     cov_rot = np.zeros((6, 6))
     r = R.from_euler(dse_constants.EULER_ORDER, state[3:6])
-    rotm = r.as_dcm()
+    rotm = r.as_matrix()
     cov_pos = cov[0:3, 0:3]
     cov_pos = rotm.dot(cov_pos).dot(rotm.T)
     cov_rot[0:3, 0:3] = cov_pos

@@ -71,7 +71,7 @@ class TestInformationFilterCommon(unittest.TestCase):
 
     # When the information filter sends back results, store them locally
     def information_callback(self, data):
-        rospy.loginfo("-D- information_filter sent back data")
+        rospy.loginfo("-D- information_filter.py sent back data")
         inf_id_list = data.ids
         self.inf_Y_prior = dse_lib.multi_array_2d_output(data.inf_matrix_prior)
         self.inf_y_prior = dse_lib.multi_array_2d_output(data.inf_vector_prior)
@@ -80,7 +80,7 @@ class TestInformationFilterCommon(unittest.TestCase):
 
     # When the direct estimator or consensus returns the combined information variables
     def estimator_results_callback(self, data):
-        rospy.loginfo("-D- information_filter sent back data")
+        rospy.loginfo("-D- information_filter.py sent back data")
         self.inf_id_list = np.array(data.ids)
         self.inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
         self.inf_y = dse_lib.multi_array_2d_output(data.inf_vector)

@@ -30,21 +30,19 @@ class information_filter:
     def __init__(self):
 
         # Get parameters from launch file
-        self.ros_prefix = rospy.get_param('~prefix')
-        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
-            self.ros_prefix = '/' + self.ros_prefix
-        self.this_agent_id = rospy.get_param('~id')
-        self.dim_state = rospy.get_param('~dim_state')
+        # self.ros_prefix = rospy.get_param('~prefix')
+        # if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+        #     self.ros_prefix = '/' + self.ros_prefix
+        # self.this_agent_id = rospy.get_param('~id')
+        # self.dim_state = rospy.get_param('~dim_state')
 
-        # self.ros_prefix = '/tb3_0'
-        # self.this_agent_id = 5
-        # self.dim_state = 6
+        self.ros_prefix = '/tb3_0'
+        self.this_agent_id = 5
+        self.dim_state = 6
 
         self.camera_pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
-        self.python_true_sub = rospy.Subscriber(self.ros_prefix + "/dse/python_pose_true", PoseMarkers, self.pthn_true_callback)
         self.inf_results_sub = rospy.Subscriber(self.ros_prefix + "/dse/inf/results", InfFilterResults, self.results_callback)
         self.meas_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/measurement", PoseArray, queue_size=10)
-        self.pthn_vis_pub = rospy.Publisher(self.ros_prefix + "/dse/vis/python_true", PoseArray, queue_size=10)
 
         self.est_ids = []
         self.est_vis_pubs = []#rospy.Publisher(self.ros_prefix + "/dse/vis/estimates", PoseArray, queue_size=10)
@@ -74,14 +72,6 @@ class information_filter:
         self.meas_vis_pub.publish(poses)
 
     # Create pose_array for the information results
-    def pthn_true_callback(self, data):
-        n = len(data.ids)
-        for i in range(n):
-            if data.ids[i] == dse_constants.GAZEBO_REFERENCE_OBJECT_ID:
-                self.pthn_ref_obj_state = dse_lib.state_from_pose_3D(data.pose_array.poses[i])
-                break
-
-    # Create pose_array for the information results
     def results_callback(self, data):
         inf_id_list = np.array(data.ids)
         inf_Y = dse_lib.multi_array_2d_output(data.inf_matrix)
@@ -94,7 +84,7 @@ class information_filter:
         if self.ros_prefix == '':
             poses.header.frame_id = 'base_footprint'
         else:
-            poses.header.frame_id = self.ros_prefix + '/base_footprint'
+            poses.header.frame_id = self.ros_prefix[1:] + '/base_footprint'
 
         estimated_ids, estimated_states = dse_lib.relative_states_from_global_3D(self.this_agent_id, inf_id_list,
                                                                                  self.inf_x, self.dim_state, self.dim_obs)
