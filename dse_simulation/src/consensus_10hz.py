@@ -104,11 +104,10 @@ class hybrid_consensus:
             array_y = copy.deepcopy(self.inf_y)
             array_I = copy.deepcopy(self.inf_I)
             array_i = copy.deepcopy(self.inf_i)
-            array_comm = np.ones(np.shape(array_ids))
-            np.fill_diagonal(array_comm, 0)
+            adj = np.ones((len(self.inf_indices), len(self.inf_indices)))
+            np.fill_diagonal(adj, 0)
 
             # Translate that into a graph ajacency matrix
-            adj = consensus_lib.apply_comm_model(array_comm)
             inf_id_list, inf_Y, inf_y = consensus_lib.consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, self.dim_state)
 
             for i in range(len(agents)):

@@ -30,15 +30,16 @@ class information_filter:
     def __init__(self):
 
         # Get parameters from launch file
-        # self.ros_prefix = rospy.get_param('~prefix')
-        # if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
-        #     self.ros_prefix = '/' + self.ros_prefix
-        # self.this_agent_id = rospy.get_param('~id')
-        # self.dim_state = rospy.get_param('~dim_state')
+        self.ros_prefix = rospy.get_param('~prefix')
+        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+            self.ros_prefix = '/' + self.ros_prefix
+        self.this_agent_id = rospy.get_param('~id')
+        self.dim_state = rospy.get_param('~dim_state')
+        self.tf_pretix = self.ros_prefix[1:]
 
-        self.ros_prefix = '/tb3_0'
-        self.this_agent_id = 5
-        self.dim_state = 6
+        # self.ros_prefix = '/tb3_0'
+        # self.this_agent_id = 5
+        # self.dim_state = 6
 
         self.camera_pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
         self.inf_results_sub = rospy.Subscriber(self.ros_prefix + "/dse/inf/results", InfFilterResults, self.results_callback)
@@ -68,7 +69,7 @@ class information_filter:
         if self.ros_prefix == '':
             poses.header.frame_id = 'base_footprint'
         else:
-            poses.header.frame_id = self.ros_prefix + '/base_footprint'
+            poses.header.frame_id = self.tf_pretix + '/base_footprint'
         self.meas_vis_pub.publish(poses)
 
     # Create pose_array for the information results
@@ -84,7 +85,7 @@ class information_filter:
         if self.ros_prefix == '':
             poses.header.frame_id = 'base_footprint'
         else:
-            poses.header.frame_id = self.ros_prefix[1:] + '/base_footprint'
+            poses.header.frame_id = self.tf_pretix + '/base_footprint'
 
         estimated_ids, estimated_states = dse_lib.relative_states_from_global_3D(self.this_agent_id, inf_id_list,
                                                                                  self.inf_x, self.dim_state, self.dim_obs)

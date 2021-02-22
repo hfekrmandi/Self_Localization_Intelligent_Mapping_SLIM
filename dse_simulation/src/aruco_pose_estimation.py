@@ -23,26 +23,27 @@ class aruco_pose:
 
     def __init__(self):
 
-        # Get parameters from launch file
-        self.ros_prefix = 'tb3_0'
-        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
-            self.ros_prefix = '/' + self.ros_prefix
-        # side length of tag in meters
-        self.markerLength = 0.1
-        self.cal_file = 'calibrationSave_2.p'
-
         # # Get parameters from launch file
-        # self.ros_prefix = rospy.get_param('~prefix', '')
+        # self.ros_prefix = 'tb3_0'
         # if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
         #     self.ros_prefix = '/' + self.ros_prefix
         # # side length of tag in meters
-        # self.markerLength = rospy.get_param('~marker_length', 0.22884)
-        # self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
+        # self.markerLength = 0.1
+        # self.cal_file = 'calibration_1080p.p'
+
+        # Get parameters from launch file
+        self.ros_prefix = rospy.get_param('~prefix', '')
+        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
+            self.ros_prefix = '/' + self.ros_prefix
+        # side length of tag in meters
+        self.markerLength = rospy.get_param('~marker_length', 0.22884)
+        self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
 
         # import saved calibration information
         # calibrationSave.p should be correct for laptop webcam
         cal = pickle.load(open(os.path.join(sys.path[0], self.cal_file), "rb"))
         self.retval, self.cameraMatrix, self.distCoeffs, self.rvecsUnused, self.tvecsUnused = cal
+        print(self.distCoeffs)
         para = aruco.DetectorParameters_create()
         para.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
 

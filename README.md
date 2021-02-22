@@ -42,7 +42,7 @@ Your directories should look like:
 	- devel
 		- setup.bash
 	- src
-		- Autonomous-GNC-MAS
+		- Self_Localization_Intelligent_Mapping_SLIM
 			- Autonomous-GNC-MAS
 			- dse_msgs
 			- dse_simulation
@@ -62,11 +62,17 @@ sudo apt update
 sudo apt install terminator
 ...
 
+And for writing code, I recommend pycharm community. It can be installed through the ubuntu software center. Then, launch it from a terminal
+...
+pycharm-community
+...
+and open a project -> select the Self_Localization_Intelligent_Mapping_SLIM folder. Set up the interpreter to be your system's python3 executable, File -> Settings -> Project -> Python Interpereter -> (click on the gear on the right) -> Add... -> Existing Environment -> Add /usr/bin/python3. This will ensure that pycharm has your installed python libraries and all of the ROS libraries. 
+
 To test this code: 
 ...
 roslaunch dse_simulation demo_1_agent.launch
 ...
-This will start a gazebo simulation with a single agent and 3 tags lined up in front of it. Each of the 3 tags is seen and estimated by the agent. The estimates are visualized as a sample of 50 vectors from the mean and covariance of the estimate(Will be improved later to a covariance ellipse). The estimates are pretty bad right now, because the camera is locked to 640x480, and the calibration is terrible (should be fixed soon). 
+This will start a gazebo simulation with a single agent and 3 tags lined up in front of it. Each of the 3 tags is seen and estimated by the agent. The estimates are visualized as a sample of 50 vectors from the mean and covariance of the estimate(Will be improved later to a covariance ellipse).
 
 Visualizing in RVIZ
 - Run the launch file dse_sim_3_robots.launch

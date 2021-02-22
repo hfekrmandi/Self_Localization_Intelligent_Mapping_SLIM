@@ -1,0 +1,60 @@
+<launch>
+  <arg name="tb3_prefix"  default="tb3_0"/>
+  <arg name="tb3_model" default="burger_5"/>
+  <arg name="tb3_x" default="-1.0"/>
+  <arg name="tb3_y" default=" 0.0"/>
+  <arg name="tb3_z" default=" 0.0"/>
+  <arg name="tb3_yaw"   default=" 0.0"/>
+  <arg name="tb3_id"    default=" 5"/>
+  
+  <arg name="dim_state"  default="6"/>
+  <arg name="marker_length"  default="0.1"/>
+  <arg name="aruco_cal_file"  default="calibration_1080p.p"/>
+  
+  <!------------------------------------------------------------------------------------------------------------------------->
+
+  <group ns = "$(arg tb3_prefix)">
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg tb3_model).urdf.xacro" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
+      <param name="publish_frequency" type="double" value="50.0" />
+      <param name="tf_prefix" value="$(arg tb3_prefix)" />
+    </node>
+
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg tb3_prefix) -x $(arg tb3_x) -y $(arg tb3_y) -z $(arg tb3_z) -Y $(arg tb3_yaw) -param robot_description" />
+  </group>
+
+  <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg tb3_prefix)/odom 100"/>
+  
+  <group ns = "$(arg tb3_prefix)">
+    <node pkg="dse_simulation" type="aruco_pose_estimation.py" name="aruco_pose_estimation_node" output="screen">
+      <param name="prefix" value="$(arg tb3_prefix)" />
+      <param name="marker_length" type="double" value="$(arg marker_length)" />
+      <param name="calibration_file" value="$(arg aruco_cal_file)" />
+    </node>
+    <node pkg="dse_simulation" type="information_filter.py" name="information_filter_node" output="screen">
+      <param name="prefix" value="$(arg tb3_prefix)" />
+      <param name="id" type="int" value="$(arg tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+      <rosparam param="initial_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg tb3_id)]
+      </rosparam>
+      <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
+                 $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
+                 $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
+                 $(arg tb3_x),  $(arg tb3_y),  $(arg tb3_yaw),  0, 0, 0]
+      </rosparam>
+    </node>
+    <node pkg="dse_simulation" type="rqt_plot_output.py" name="dse_plotting_node" output="screen">
+      <param name="prefix" value="$(arg tb3_prefix)" />
+      <param name="id" type="int" value="$(arg tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+    <node pkg="dse_simulation" type="visualize_estimates.py" name="dse_gazebo_visualization_node" output="screen">
+      <param name="prefix" value="$(arg tb3_prefix)" />
+      <param name="id" type="int" value="$(arg tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+  </group>
+</launch>
