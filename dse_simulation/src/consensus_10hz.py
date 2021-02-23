@@ -20,6 +20,7 @@ import tf_conversions
 import tf2_ros
 import message_filters
 import copy
+from threading import Thread, Lock
 
 import dse_lib
 import consensus_lib
@@ -42,14 +43,15 @@ class hybrid_consensus:
         self.inf_I = []
         self.inf_i = []
         self.inf_indices = []
+        self.mutex = Lock()
 
         # Get parameters from launch file
-        self.n_params = 3
-        self.dim_state = 6
-        self.object_names = ['tb3_0', 'tb3_1', 'tb3_2']
-        # self.object_names = rospy.get_param('~objects')
-        # self.dim_state = rospy.get_param('~dim_state', 6)
-        # self.n_params = rospy.get_param('~n_params')
+        # self.n_params = 3
+        # self.dim_state = 6
+        # self.object_names = ['tb3_0', 'tb3_1', 'tb3_2']
+        self.object_names = rospy.get_param('~objects')
+        self.dim_state = rospy.get_param('~dim_state', 6)
+        self.n_params = rospy.get_param('~n_params')
 
         for i in range(self.n_params):
             if len(self.object_names[i]) != 0 and self.object_names[i][0] != '/':
@@ -70,6 +72,7 @@ class hybrid_consensus:
 
     # When the information filter sends partials (prior and measurement), combine and return them
     def information_callback(self, data, agent_index):
+        self.mutex.acquire()
         if agent_index in self.inf_indices:
             inf_index = np.where(np.array(self.inf_indices) == agent_index)[0][0]
             self.inf_id_list[inf_index] = data.ids
@@ -85,6 +88,7 @@ class hybrid_consensus:
             self.inf_y.append(dse_lib.multi_array_2d_output(data.inf_vector_prior))
             self.inf_I.append(dse_lib.multi_array_2d_output(data.obs_matrix))
             self.inf_i.append(dse_lib.multi_array_2d_output(data.obs_vector))
+        self.mutex.release()
 
     # Option 1:
     #   Create a communication graph for the whole system
@@ -95,7 +99,9 @@ class hybrid_consensus:
 
     # When the information filter sends partials (prior and measurement), combine and return them
     def estimate_and_send(self):
+        self.mutex.acquire()
         if len(self.inf_indices) > 0:
+
 
             agents = copy.deepcopy(self.inf_indices)
             order_to_id = copy.deepcopy(self.inf_id)
@@ -124,6 +130,8 @@ class hybrid_consensus:
             self.inf_y = []
             self.inf_I = []
             self.inf_i = []
+
+        self.mutex.release()
 
 
 def main(args):

@@ -147,6 +147,7 @@ def apply_comm_model(obs_lists, method_='connected'):
 # Perform one consensus step
 def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, dim_state, num_steps=20):
     # Perform consensus computations
+
     array_ids, array_Y, array_y, array_I, array_i = \
         get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_state)
 

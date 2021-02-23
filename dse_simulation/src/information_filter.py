@@ -36,12 +36,10 @@ class information_filter:
         self.init_est = rospy.get_param('~initial_estimates', [])
 
         # self.ros_prefix = '/tb3_0'
-        # self.this_agent_id = 2001
+        # self.this_agent_id = 5
         # self.dim_state = 6
-        # self.init_ids = [2001, 2002, 2003, 0, 1, 2]
-        # self.init_est = [-1.0,-1.0, 0.0, 0, 0, 0,
-        #                  -1.0, 0.0, 0.0, 0, 0, 0,
-        #                  -1.0, 1.0, 0.0, 0, 0, 0,
+        # self.init_ids = [5, 0, 1, 2]
+        # self.init_est = [-1.0, 0.0, 0.0, 0, 0, 0,
         #                   1.0,-0.5, 0.0, 0, 0, 0,
         #                   1.0, 0.0, 0.0, 0, 0, 0,
         #                   1.0, 0.5, 0.0, 0, 0, 0]

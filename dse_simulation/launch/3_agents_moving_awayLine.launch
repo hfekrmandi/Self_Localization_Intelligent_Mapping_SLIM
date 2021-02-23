@@ -1,46 +1,52 @@
 <launch>
-  <arg name="first_tb3_prefix"  default="tb3_0"/>
-  <arg name="first_tb3_model" default="burger_5"/>
-  <arg name="first_tb3_x" default="-1.0"/>
-  <arg name="first_tb3_y" default="-1.0"/>
-  <arg name="first_tb3_z" default=" 0.0"/>
-  <arg name="first_tb3_yaw"   default=" 0.0"/>
-  <arg name="first_tb3_id"    default=" 5"/>
+  <arg name="first_tb3_prefix" default="tb3_0"/>
+  <arg name="first_tb3_model"  default="burger_5"/>
+  <arg name="first_tb3_x" 	default="-1.0"/>
+  <arg name="first_tb3_y" 	default=" 0.0"/>
+  <arg name="first_tb3_z" 	default=" 0.0"/>
+  <arg name="first_tb3_yaw"    default=" 1.57079632679"/>
+  <arg name="first_tb3_id"     default=" 5"/>
   
-  <arg name="second_tb3_prefix"  default="tb3_1"/>
+  <arg name="second_tb3_prefix" default="tb3_1"/>
   <arg name="second_tb3_model" default="burger_6"/>
-  <arg name="second_tb3_x" default="-1.0"/>
-  <arg name="second_tb3_y" default=" 0.0"/>
-  <arg name="second_tb3_z" default=" 0.0"/>
-  <arg name="second_tb3_yaw"   default=" 0.0"/>
+  <arg name="second_tb3_x" 	default=" 0.0"/>
+  <arg name="second_tb3_y" 	default=" 0.0"/>
+  <arg name="second_tb3_z" 	default=" 0.0"/>
+  <arg name="second_tb3_yaw"   default=" 1.57079632679"/>
   <arg name="second_tb3_id"    default=" 6"/>
 
-  <arg name="third_tb3_prefix"  default="tb3_2"/>
-  <arg name="third_tb3_model" default="burger_7"/>
-  <arg name="third_tb3_x" default="-1.0"/>
-  <arg name="third_tb3_y" default=" 1.0"/>
-  <arg name="third_tb3_z" default=" 0.0"/>
-  <arg name="third_tb3_yaw"   default=" 0.0"/>
-  <arg name="third_tb3_id"    default=" 7"/>
+  <arg name="third_tb3_prefix" default="tb3_2"/>
+  <arg name="third_tb3_model"  default="burger_7"/>
+  <arg name="third_tb3_x" 	default=" 1.0"/>
+  <arg name="third_tb3_y" 	default=" 0.0"/>
+  <arg name="third_tb3_z" 	default=" 0.0"/>
+  <arg name="third_tb3_yaw"    default=" 1.57079632679"/>
+  <arg name="third_tb3_id"     default=" 7"/>
 
-  <arg name="landmark_1_x"    default=" 1.0"/>
-  <arg name="landmark_1_y"    default="-0.5"/>
-  <arg name="landmark_1_yaw"  default=" 0.0"/>
+  <arg name="landmark_1_x"    default="-0.5"/>
+  <arg name="landmark_1_y"    default=" 3.0"/>
+  <arg name="landmark_1_yaw"  default=" 4.7124"/>
   <arg name="landmark_1_id"   default="0"/>
   <arg name="landmark_1_name" default="aruco_marker_0"/>
 
-  <arg name="landmark_2_x"    default=" 1.0"/>
-  <arg name="landmark_2_y"    default=" 0.0"/>
-  <arg name="landmark_2_yaw"  default=" 0.0"/>
+  <arg name="landmark_2_x"    default=" 0.5"/>
+  <arg name="landmark_2_y"    default=" 3.0"/>
+  <arg name="landmark_2_yaw"  default=" 4.7124"/>
   <arg name="landmark_2_id"   default="1"/>
   <arg name="landmark_2_name" default="aruco_marker_1"/>
 
-  <arg name="landmark_3_x"    default=" 1.0"/>
-  <arg name="landmark_3_y"    default=" 0.5"/>
-  <arg name="landmark_3_yaw"  default=" 0.0"/>
+  <arg name="landmark_3_x"    default="-0.5"/>
+  <arg name="landmark_3_y"    default=" 6.0"/>
+  <arg name="landmark_3_yaw"  default=" 4.7124"/>
   <arg name="landmark_3_id"   default="2"/>
   <arg name="landmark_3_name" default="aruco_marker_2"/>
-  
+
+  <arg name="landmark_4_x"    default=" 0.5"/>
+  <arg name="landmark_4_y"    default=" 6.0"/>
+  <arg name="landmark_4_yaw"  default=" 4.7124"/>
+  <arg name="landmark_4_id"   default="3"/>
+  <arg name="landmark_4_name" default="aruco_marker_3"/>
+
   <arg name="dim_state"  default="6"/>
   <arg name="marker_length"  default="0.1"/>
   <arg name="aruco_cal_file"  default="calibration_1080p.p"/>
@@ -49,7 +55,7 @@
   <arg name="debug" default="false" />
   <arg name="gui" default="true" />
   <arg name="pause" default="false" />
-  <arg name="world" default="$(find dse_simulation)/world/3_aruco_landmarks_line.world" />
+  <arg name="world" default="$(find dse_simulation)/world/2x2_aruco_landmarks_away_line.world" />
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world)" />
     <arg name="debug" value="$(arg debug)" />
@@ -57,7 +63,8 @@
     <arg name="paused" value="$(arg pause)" />
     <arg name="use_sim_time" value="true" />
   </include>
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find dse_simulation)/rviz/dse_sim_cov_rviz_config.rviz" />
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find dse_simulation)/rviz/3_agents_4_tags_dse_config.rviz" />
 
   <group ns = "$(arg first_tb3_prefix)">
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
@@ -101,11 +108,11 @@
   <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg second_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg second_tb3_prefix)/odom 100"/>
   <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg third_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg third_tb3_prefix)/odom 100"/>
   
-  <!--<node pkg="dse_simulation" type="consensus_10hz.py" name="dse_consensus_node" output="screen">
+  <node pkg="dse_simulation" type="consensus_10hz.py" name="dse_consensus_node" output="screen">
     <param name="n_params" value="3" />
     <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg second_tb3_prefix), $(arg third_tb3_prefix)]</rosparam>
     <param name="dim_state" type="int" value="$(arg dim_state)" />
-  </node>-->
+  </node>
 
   <group ns = "$(arg first_tb3_prefix)">
     <node pkg="dse_simulation" type="aruco_pose_estimation.py" name="aruco_pose_estimation_node" output="screen">
@@ -118,13 +125,14 @@
       <param name="id" type="int" value="$(arg first_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
       <rosparam param="initial_ids" subst_value="True"> 
-                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), 
-                $(arg first_tb3_id), $(arg second_tb3_id), $(arg third_tb3_id)]
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
       </rosparam>
       <rosparam param="initial_estimates" subst_value="True"> 
                 [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
                  $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
                  $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
                  $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
                  $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
                  $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
@@ -140,6 +148,10 @@
       <param name="id" type="int" value="$(arg first_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
     </node>
+    <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3_prefix)" />
+      <param name="fwd_vel" type="double" value="0.1" />
+    </node>
   </group>
   
   <group ns = "$(arg second_tb3_prefix)">
@@ -153,14 +165,15 @@
       <param name="id" type="int" value="$(arg second_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
       <rosparam param="initial_ids" subst_value="True"> 
-                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), 
-                $(arg second_tb3_id), $(arg second_tb3_id), $(arg third_tb3_id)]
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
       </rosparam>
       <rosparam param="initial_estimates" subst_value="True"> 
                 [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
                  $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
                  $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
-                 $(arg second_tb3_x),  $(arg second_tb3_y),  $(arg second_tb3_yaw),  0, 0, 0,
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
+                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
                  $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
                  $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
       </rosparam>
@@ -174,6 +187,10 @@
       <param name="prefix" value="$(arg second_tb3_prefix)" />
       <param name="id" type="int" value="$(arg second_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+    <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3_prefix)" />
+      <param name="fwd_vel" type="double" value="0.1" />
     </node>
   </group>
   
@@ -188,14 +205,15 @@
       <param name="id" type="int" value="$(arg third_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
       <rosparam param="initial_ids" subst_value="True"> 
-                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), 
-                $(arg third_tb3_id), $(arg second_tb3_id), $(arg third_tb3_id)]
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
       </rosparam>
       <rosparam param="initial_estimates" subst_value="True"> 
                 [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
                  $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
                  $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
-                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0,
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
+                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
                  $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
                  $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
       </rosparam>
@@ -209,6 +227,10 @@
       <param name="prefix" value="$(arg third_tb3_prefix)" />
       <param name="id" type="int" value="$(arg third_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+    <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
+      <param name="prefix" value="$(arg third_tb3_prefix)" />
+      <param name="fwd_vel" type="double" value="0.1" />
     </node>
   </group>
 </launch>
