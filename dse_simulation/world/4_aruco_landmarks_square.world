@@ -2,11 +2,6 @@
 
 <sdf version="1.5">
 	<world name="default">
-		<!-- A global light source -->
-		<include>
-			<uri>model://sun</uri>
-		</include>
-
 		<!-- A ground plane -->
 		<include>
 			<uri>model://ground_plane</uri>
@@ -17,24 +12,67 @@
 			<uri>model://aruco_marker_0</uri>
 			<pose>-2 -2 0.25 0 0 0</pose>
 		</include>
+		<light type="point" name="my_light_0">
+		    <pose>-1 -2 1 0 0 0</pose>
+		    <diffuse>.5 .5 .5 1</diffuse>
+		    <specular>.1 .1 .1 1</specular>
+		    <attenuation>
+		        <range>20</range>
+		        <constant>0.5</constant>
+		        <linear>0.01</linear>
+		    </attenuation>
+		    <cast_shadows>true</cast_shadows>
+		</light>
 
         	<!-- aruco landmark 1 -->
 		<include>
 			<uri>model://aruco_marker_1</uri>
 			<pose>-2 2 0.25 0 0 1.571</pose>
 		</include>
+		<light type="point" name="my_light_1">
+		    <pose>-2 1 1 0 0 0</pose>
+		    <diffuse>.5 .5 .5 1</diffuse>
+		    <specular>.1 .1 .1 1</specular>
+		    <attenuation>
+		        <range>20</range>
+		        <constant>0.5</constant>
+		        <linear>0.01</linear>
+		    </attenuation>
+		    <cast_shadows>true</cast_shadows>
+		</light>
 
         	<!-- aruco landmark 2 -->
 		<include>
 			<uri>model://aruco_marker_2</uri>
 			<pose>2 2 0.25 0 0 3.141</pose>
 		</include>
+		<light type="point" name="my_light_2">
+		    <pose>1 2 1 0 0 0</pose>
+		    <diffuse>.5 .5 .5 1</diffuse>
+		    <specular>.1 .1 .1 1</specular>
+		    <attenuation>
+		        <range>20</range>
+		        <constant>0.5</constant>
+		        <linear>0.01</linear>
+		    </attenuation>
+		    <cast_shadows>true</cast_shadows>
+		</light>
 
         	<!-- aruco landmark 3 -->
 		<include>
 			<uri>model://aruco_marker_3</uri>
 			<pose>2 -2 0.25 0 0 4.712</pose>
 		</include>
-
+		<light type="point" name="my_light_3">
+		    <pose>2 -1 1 0 0 0</pose>
+		    <diffuse>.5 .5 .5 1</diffuse>
+		    <specular>.1 .1 .1 1</specular>
+		    <attenuation>
+		        <range>20</range>
+		        <constant>0.5</constant>
+		        <linear>0.01</linear>
+		    </attenuation>
+		    <cast_shadows>true</cast_shadows>
+		</light>
 	</world>
 </sdf>

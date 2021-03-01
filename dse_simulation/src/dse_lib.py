@@ -914,15 +914,6 @@ def get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_s
     return array_ids, array_Y, array_y, array_I, array_i
 
 
-def break_agents_into_groups(array_ids, obs_ids):
-    groups = [[0, 1, 2], [3], [4, 5]]
-    return groups
-
-
-def consensus():
-    return
-
-
 def state_to_xyzypr(state):
     state = state[:, 0]
     if len(state) == 6:
