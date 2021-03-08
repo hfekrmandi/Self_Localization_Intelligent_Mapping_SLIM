@@ -55,6 +55,14 @@
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg first_tb3_prefix) -x $(arg first_tb3_x) -y $(arg first_tb3_y) -z $(arg first_tb3_z) -Y $(arg first_tb3_yaw) -param robot_description" />
   </group>
 
+  <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">
+    <param name="n_params" value="3" />
+    <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg landmark_1_name), $(arg landmark_2_name), $(arg landmark_3_name)]</rosparam>
+    <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id), $(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id)]</rosparam>
+    <rosparam param="agent_ids" subst_value="True"> [$(arg first_tb3_id)]</rosparam>
+    <param name="dim_state" type="int" value="$(arg dim_state)" />
+  </node>
+
   <node pkg="dse_simulation" type="direct_estimator.py" name="direct_estimator_node" output="screen">
     <param name="prefix" value="$(arg first_tb3_prefix)" />
   </node>
@@ -90,7 +98,7 @@
       <param name="id" type="int" value="$(arg first_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
     </node>
-    <node pkg="dse_simulation" type="visualize_estimates.py" name="dse_gazebo_visualization_node" output="screen">
+    <node pkg="dse_simulation" type="visualize_estimates_odometry.py" name="dse_gazebo_visualization_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
       <param name="id" type="int" value="$(arg first_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />

@@ -99,14 +99,7 @@ class information_filter:
 
     # When control signals are sent, store them. More logic to come later for storing more than just one agent.
     def control_callback(self, data):
-        id = 0
-        self.ctrl_ids[0] = self.this_agent_id
-        self.ctrl[id][0] = np.array(data.linear.x)
-        self.ctrl[id][1] = np.array(data.linear.y)
-        self.ctrl[id][2] = np.array(data.linear.z)
-        self.ctrl[id][3] = np.array(data.angular.z)
-        self.ctrl[id][4] = np.array(data.angular.y)
-        self.ctrl[id][5] = np.array(data.angular.x)
+        self.ctrl_twist = data
 
     # When the direct estimator or consensus returns the combined information variables
     def results_callback(self, data):
@@ -152,7 +145,7 @@ class information_filter:
         # B - Control matrix
         # u - Control signals
         # This function is not ready yet.
-        B_0, u_0 = dse_lib.fill_Bu(id_list, self.this_agent_id, self.ctrl_ids, x_11, self.ctrl, self.dim_state, self.dim_obs)
+        # B_0, u_0 = dse_lib.fill_Bu(id_list, self.this_agent_id, self.ctrl_ids, x_11, self.ctrl, self.dim_state, self.dim_obs)
 
         # y = z_0 - H_0.dot(x_11)
         # for i in range(len(z_0) // 3):

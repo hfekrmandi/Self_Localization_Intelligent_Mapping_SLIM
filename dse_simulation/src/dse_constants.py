@@ -9,3 +9,5 @@ INF_VECTOR_INITIAL = 0.01           # Initial information vector (states) value.
 MOTION_BASE_COVARIANCE = 0.000001   # Motion model covariance for velocity. Equivalent to 1 mm/sec standard deviation
 GAZEBO_REFERENCE_OBJECT_NAME = 'aruco_marker::link'
 GAZEBO_REFERENCE_OBJECT_ID = 0
+ARUCO_TAG_TOTAL_SIZE = 512
+ARUCO_TAG_NO_BORDER_SIZE = 340

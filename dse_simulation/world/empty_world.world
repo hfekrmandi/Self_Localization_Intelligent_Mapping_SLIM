@@ -11,10 +11,5 @@
 		<include>
 			<uri>model://ground_plane</uri>
 		</include>
-
-        	<!-- Our custom model -->
-		<include>
-			<uri>model://aruco_marker_0</uri>
-		</include>
 	</world>
 </sdf>

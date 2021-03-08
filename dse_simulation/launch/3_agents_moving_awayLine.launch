@@ -23,25 +23,25 @@
   <arg name="third_tb3_yaw"    default=" 1.57079632679"/>
   <arg name="third_tb3_id"     default=" 7"/>
 
-  <arg name="landmark_1_x"    default="-0.5"/>
+  <arg name="landmark_1_x"    default="-1.5"/>
   <arg name="landmark_1_y"    default=" 3.0"/>
   <arg name="landmark_1_yaw"  default=" 4.7124"/>
   <arg name="landmark_1_id"   default="0"/>
   <arg name="landmark_1_name" default="aruco_marker_0"/>
 
-  <arg name="landmark_2_x"    default=" 0.5"/>
+  <arg name="landmark_2_x"    default="-0.5"/>
   <arg name="landmark_2_y"    default=" 3.0"/>
   <arg name="landmark_2_yaw"  default=" 4.7124"/>
   <arg name="landmark_2_id"   default="1"/>
   <arg name="landmark_2_name" default="aruco_marker_1"/>
 
-  <arg name="landmark_3_x"    default="-0.5"/>
+  <arg name="landmark_3_x"    default="-1.5"/>
   <arg name="landmark_3_y"    default=" 6.0"/>
   <arg name="landmark_3_yaw"  default=" 4.7124"/>
   <arg name="landmark_3_id"   default="2"/>
   <arg name="landmark_3_name" default="aruco_marker_2"/>
 
-  <arg name="landmark_4_x"    default=" 0.5"/>
+  <arg name="landmark_4_x"    default="-0.5"/>
   <arg name="landmark_4_y"    default=" 6.0"/>
   <arg name="landmark_4_yaw"  default=" 4.7124"/>
   <arg name="landmark_4_id"   default="3"/>
@@ -108,6 +108,14 @@
   <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg second_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg second_tb3_prefix)/odom 100"/>
   <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg third_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg third_tb3_prefix)/odom 100"/>
   
+  <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">
+    <param name="n_params" value="3" />
+    <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg second_tb3_prefix), $(arg third_tb3_prefix), $(arg landmark_1_name), $(arg landmark_2_name), $(arg landmark_3_name), $(arg landmark_4_name)]</rosparam>
+    <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id), $(arg third_tb3_id), $(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]</rosparam>
+    <rosparam param="agent_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id), $(arg third_tb3_id)]</rosparam>
+    <param name="dim_state" type="int" value="$(arg dim_state)" />
+  </node>
+
   <node pkg="dse_simulation" type="consensus_10hz.py" name="dse_consensus_node" output="screen">
     <param name="n_params" value="3" />
     <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg second_tb3_prefix), $(arg third_tb3_prefix)]</rosparam>
