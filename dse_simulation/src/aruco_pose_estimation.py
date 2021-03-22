@@ -38,6 +38,8 @@ class aruco_pose:
         # side length of tag in meters
         self.markerLength = rospy.get_param('~marker_length', 0.22884)
         self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
+        self.data_skip = rospy.get_param('~data_skip', 0)
+        self.data_skip_count = 0
 
         # import saved calibration information
         # calibrationSave.p should be correct for laptop webcam
@@ -64,6 +66,12 @@ class aruco_pose:
         self.pose_pub = rospy.Publisher(self.ros_prefix + "/dse/pose_markers", PoseMarkers, queue_size=1)
 
     def callback(self, data):
+        # Lowering the camera image rate
+        if self.data_skip_count < self.data_skip:
+            self.data_skip_count += 1
+            return
+        self.data_skip_count = 0
+
         try:
             frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         except CvBridgeError as e:
@@ -130,7 +138,7 @@ class aruco_pose:
                 pose.orientation.w = quat[3]
                 marker_pose.pose_array.poses += [pose]
             marker_pose.pose_array.header.stamp = rospy.Time.now()
-            marker_pose.pose_array.header.frame_id = 'dse'
+            marker_pose.pose_array.header.frame_id = self.ros_prefix + '/camera_rgb_frame'
             self.pose_pub.publish(marker_pose)
 
 

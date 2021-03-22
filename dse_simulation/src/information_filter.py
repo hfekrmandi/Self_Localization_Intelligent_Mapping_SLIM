@@ -34,6 +34,7 @@ class information_filter:
         self.dim_state = rospy.get_param('~dim_state')
         self.init_ids = rospy.get_param('~initial_ids', [])
         self.init_est = rospy.get_param('~initial_estimates', [])
+        self.pub_errors = rospy.get_param('~pub_errors', 0)
 
         # self.ros_prefix = '/tb3_0'
         # self.this_agent_id = 5
@@ -55,6 +56,12 @@ class information_filter:
         self.pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
         # Publish the information priors (inf_Y = Y_01) and the measurements (inf_I = delta_I)
         self.inf_pub = rospy.Publisher(self.ros_prefix + "/dse/inf/partial", InfFilterPartials, queue_size=10)
+
+        if self.pub_errors:
+            self.camera_error_pub = rospy.Publisher(self.ros_prefix + "/diag/camera_error", PoseMarkers, queue_size=1)
+            self.motion_error_pub = rospy.Publisher(self.ros_prefix + "/diag/motion_error", PoseMarkers, queue_size=1)
+            self.imu_error_pub = rospy.Publisher(self.ros_prefix + "/diag/imu_error", PoseMarkers, queue_size=1)
+            self.control_error_pub = rospy.Publisher(self.ros_prefix + "/diag/control_error", PoseMarkers, queue_size=1)
 
         # Grab the state dimension and make sure it is either 6 or 12, as only those two sizes are currently implemented.
         if self.dim_state == 6:
@@ -93,9 +100,8 @@ class information_filter:
             self.inf_y = dse_constants.INF_VECTOR_INITIAL * \
                          np.transpose(1 * np.arange(1, self.dim_state + 1, dtype=np.float64))[:, None]
 
-        # Initialize the control input arrays
-        self.ctrl_ids = [self.this_agent_id]
-        self.ctrl = np.zeros((1, 6))
+        # store the control data
+        self.ctrl_twist = Twist()
 
     # When control signals are sent, store them. More logic to come later for storing more than just one agent.
     def control_callback(self, data):
@@ -145,7 +151,7 @@ class information_filter:
         # B - Control matrix
         # u - Control signals
         # This function is not ready yet.
-        # B_0, u_0 = dse_lib.fill_Bu(id_list, self.this_agent_id, self.ctrl_ids, x_11, self.ctrl, self.dim_state, self.dim_obs)
+        # B_0, u_0 = dse_lib.fill_Bu(id_list, self.this_agent_id, self.ctrl_twist, self.dim_state, self.dim_obs)
 
         # y = z_0 - H_0.dot(x_11)
         # for i in range(len(z_0) // 3):
@@ -173,7 +179,7 @@ class information_filter:
         C_0 = M_0.dot(np.linalg.inv(M_0 + np.linalg.inv(Q_0)))
         L_0 = np.eye(np.shape(C_0)[0]) - C_0
         Y_01 = L_0.dot(M_0.dot(np.transpose(L_0))) + C_0.dot(np.linalg.inv(Q_0).dot(np.transpose(C_0)))
-        y_01 = L_0.dot(np.transpose(np.linalg.inv(F_0)).dot(y_11))  # + Y_01.dot(B_0.dot(u_0))
+        y_01 = L_0.dot(np.transpose(np.linalg.inv(F_0)).dot(y_11))# + Y_01.dot(B_0.dot(u_0))
         Y_00 = Y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(H_0))
         y_00 = y_01 + np.transpose(H_0).dot(np.linalg.inv(R_0).dot(z_0))
         # Don't use z, loop up extended information filter
@@ -218,6 +224,9 @@ class information_filter:
         # print('new: ')
         # print(inf_y)
         # print()
+
+        if self.pub_errors:
+            print('errors')
 
 
 def main(args):

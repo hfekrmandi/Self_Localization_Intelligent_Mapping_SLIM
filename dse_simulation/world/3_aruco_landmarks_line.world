@@ -10,18 +10,13 @@
 		    <attenuation>
 		        <range>20</range>
 		    </attenuation>
-		    <direction>1 0 -1</direction>
+		    <direction>1 1 -1</direction>
 		    <cast_shadows>true</cast_shadows>
 		</light>
 		
-		<!--<include>
-			<uri>model://sun</uri>
-			<pose>0 0 10 0 0 0</pose>
-		</include>-->
-
 		<!-- A ground plane -->
 		<include>
-			<uri>model://moon_floor</uri>
+			<uri>model://ground_plane</uri>
 		</include>
 
         	<!-- aruco landmark 0 -->

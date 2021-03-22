@@ -50,6 +50,7 @@
   <arg name="dim_state"  default="6"/>
   <arg name="marker_length"  default="0.1"/>
   <arg name="aruco_cal_file"  default="calibration_1080p.p"/>
+  <arg name="data_skip"  default="4"/>
   
   <!-- Launch gazebo world -->
   <arg name="debug" default="false" />
@@ -127,6 +128,7 @@
       <param name="prefix" value="$(arg first_tb3_prefix)" />
       <param name="marker_length" type="double" value="$(arg marker_length)" />
       <param name="calibration_file" value="$(arg aruco_cal_file)" />
+      <param name="data_skip" value="$(arg data_skip)" />
     </node>
     <node pkg="dse_simulation" type="information_filter.py" name="information_filter_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
@@ -159,6 +161,14 @@
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
       <param name="fwd_vel" type="double" value="0.1" />
+    </node>
+    <node pkg="dse_simulation" type="measurement_error.py" name="measurement_error_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <rosparam param="initial_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
+      </rosparam>
     </node>
   </group>
   
@@ -167,6 +177,7 @@
       <param name="prefix" value="$(arg second_tb3_prefix)" />
       <param name="marker_length" type="double" value="$(arg marker_length)" />
       <param name="calibration_file" value="$(arg aruco_cal_file)" />
+      <param name="data_skip" value="$(arg data_skip)" />
     </node>
     <node pkg="dse_simulation" type="information_filter.py" name="information_filter_node" output="screen">
       <param name="prefix" value="$(arg second_tb3_prefix)" />
@@ -199,6 +210,10 @@
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg second_tb3_prefix)" />
       <param name="fwd_vel" type="double" value="0.1" />
+    </node>
+    <node pkg="dse_simulation" type="measurement_error.py" name="measurement_error_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg second_tb3_id)" />
     </node>
   </group>
   
@@ -207,6 +222,7 @@
       <param name="prefix" value="$(arg third_tb3_prefix)" />
       <param name="marker_length" type="double" value="$(arg marker_length)" />
       <param name="calibration_file" value="$(arg aruco_cal_file)" />
+      <param name="data_skip" value="$(arg data_skip)" />
     </node>
     <node pkg="dse_simulation" type="information_filter.py" name="information_filter_node" output="screen">
       <param name="prefix" value="$(arg third_tb3_prefix)" />
@@ -239,6 +255,10 @@
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg third_tb3_prefix)" />
       <param name="fwd_vel" type="double" value="0.1" />
+    </node>
+    <node pkg="dse_simulation" type="measurement_error.py" name="measurement_error_node" output="screen">
+      <param name="prefix" value="$(arg third_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg third_tb3_id)" />
     </node>
   </group>
 </launch>

@@ -53,6 +53,9 @@ def aruco_R_from_range_3D(range):
     # Assuming linear error with a slope of:
     # [x y z phi theta psi]
     # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
+    ### [x, y, theta] [m, m, radians]
+    # [0.2, 0.2, 0.2]
+    # was 20*
     x = 20*np.transpose([0.01, 0.01, 0.01]) # Radians
     # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
 
@@ -492,9 +495,10 @@ def fill_FQ(id_list, dt, x_11, dim_state, dim_obs):
         i_low = dim_state * i
         i_high = i_low + dim_state
 
-        # If we are looking at ID 0, it is a waypoint and as such doesn't move (F is identity matrix)
+        # If we are looking at ID <5, it is a waypoint and as such doesn't move (F is identity matrix)
         if id_list[i] < 5:
-            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001/dt)
+            #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001/dt)
+            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
             F_0[i_low:i_high, i_low:i_high] = f_eye(dim_state)
         else:
             # Else use the unicycle model
@@ -502,10 +506,12 @@ def fill_FQ(id_list, dt, x_11, dim_state, dim_obs):
 
                 # Q is a function of distance traveled in the last time step
                 Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
+                #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
             else:
                 # Q is a function of distance traveled in the last time step
                 Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
+                #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
 
     return F_0, Q_0
@@ -615,26 +621,25 @@ def fill_RHz_fixed(id_list, my_id, observed_ids, observed_poses, x_11, euler_ord
 # B - Control matrix
 # u - Control signals
 # This function is not ready and has not been tested
-def fill_Bu(id_list, my_id, ctrl_ids, x, ctrl, dim_state, dim_obs):
+def fill_Bu(id_list, my_id, ctrl, dim_state, dim_obs):
 
     # Define the sizes of each variable
     n_stored = len(id_list)
     B = np.zeros((n_stored * dim_state, n_stored * dim_state))
     u = np.zeros((n_stored * dim_state, 1))
 
-    # For each agent that we have a control signal:
-    for i in range(len(ctrl_ids)):
-        id = ctrl_ids[i]
-        index = np.where(id_list == id)[0][0]           # Index of observed agent
+    index = np.where(id_list == my_id)[0][0]
 
-        i_low = dim_state * index
-        i_high = i_low + dim_obs
+    i_low = dim_state * index
+    i_high = i_low + dim_obs
 
-        B[i_low:i_high, i_low:i_high] = B_eye(dim_obs)
-        if dim_obs == 3:
-            u[i_low+3:i_high+3] = np.array([ctrl[i][0], ctrl[i][1], ctrl[i][4]])[:, None]
-        else:
-            u[i_low+6:i_high+6] = ctrl[i]
+    B[i_low:i_high, i_low:i_high] = B_eye(dim_obs)
+    if dim_obs == 3:
+        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.angular.z])
+        u[i_low+3:i_high+3] = ctrl_vect[:, None]
+    else:
+        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.linear.z, ctrl.angular.x, ctrl.angular.y, ctrl.angular.z])
+        u[i_low+6:i_high+6] = ctrl_vect[:, None]
 
     return B, u
 
@@ -833,7 +838,7 @@ def q_distance(dt, x, agent1, dim_state):
 
 
 # Define motion model covariance (static)
-def q_const(dim_state, var=0.000001):
+def q_const(dim_state, var=0.0000001):
     Q = var * np.eye(dim_state)
     return Q
 
