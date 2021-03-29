@@ -51,17 +51,16 @@ class hybrid_consensus:
         # self.object_names = ['tb3_0', 'tb3_1', 'tb3_2']
         self.object_names = rospy.get_param('~objects')
         self.dim_state = rospy.get_param('~dim_state', 6)
-        self.n_params = rospy.get_param('~n_params')
 
-        for i in range(self.n_params):
+        for i in range(len(self.object_names)):
             if len(self.object_names[i]) != 0 and self.object_names[i][0] != '/':
                 self.object_names[i] = '/' + self.object_names[i]
-        # self.agent_ids = [2000, 2001, 2002]
-        for i in range(self.n_params):
+
             self.inf_pubs.append(rospy.Publisher(
                 self.object_names[i] + "/dse/inf/results", InfFilterResults, queue_size=10))
             self.inf_subs.append(rospy.Subscriber(
                 self.object_names[i] + "/dse/inf/partial", InfFilterPartials, self.information_callback, i))
+        # self.agent_ids = [2000, 2001, 2002]
 
     # def gzbo_true_callback(self, data):
     #     n = len(data.name)

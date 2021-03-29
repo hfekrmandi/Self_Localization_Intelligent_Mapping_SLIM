@@ -48,24 +48,24 @@ class measurement_error:
             7:'/tb3_2',
         }
 
-        self.data_file = open('/home/alex/error_data.csv', mode='w')
-        self.csv_writer = csv.writer(self.data_file, delimiter=',')
-        csv_header = []
-        for i in self.init_ids:
-            for j in ['true_dist', 'dist error', 'angle error']:
-                csv_header.append(str(self.id_to_tf[i][1:] + ' ' + j))
-        self.csv_writer.writerow(csv_header)
-        self.csv_writer.writerow(csv_header)
-
-        self.all_data_file = open('/home/alex/all_data.csv', mode='w')
-        self.all_csv_writer = csv.writer(self.all_data_file, delimiter=',')
-        csv_header = []
-        for k in ['est', 'true', 'error']:
-            for i in self.init_ids:
-                for j in ['x', 'y', 'z', 'y', 'p', 'r']:
-                    csv_header.append(str(self.id_to_tf[i][1:] + ' ' + j + '' + k))
-        self.all_csv_writer.writerow(csv_header)
-        self.all_csv_writer.writerow(csv_header)
+        # self.data_file = open('/home/alex/error_data.csv', mode='w')
+        # self.csv_writer = csv.writer(self.data_file, delimiter=',')
+        # csv_header = []
+        # for i in self.init_ids:
+        #     for j in ['true_dist', 'dist error', 'angle error']:
+        #         csv_header.append(str(self.id_to_tf[i][1:] + ' ' + j))
+        # self.csv_writer.writerow(csv_header)
+        # self.csv_writer.writerow(csv_header)
+        #
+        # self.all_data_file = open('/home/alex/all_data.csv', mode='w')
+        # self.all_csv_writer = csv.writer(self.all_data_file, delimiter=',')
+        # csv_header = []
+        # for k in ['est', 'true', 'error']:
+        #     for i in self.init_ids:
+        #         for j in ['x', 'y', 'z', 'y', 'p', 'r']:
+        #             csv_header.append(str(self.id_to_tf[i][1:] + ' ' + j + '' + k))
+        # self.all_csv_writer.writerow(csv_header)
+        # self.all_csv_writer.writerow(csv_header)
 
         # self.ros_prefix = '/tb3_0'
         # self.this_agent_id = 5
@@ -83,6 +83,7 @@ class measurement_error:
         self.pose_sub = rospy.Subscriber(self.ros_prefix + "/dse/pose_markers", PoseMarkers, self.measurement_callback)
         # self.store_data_sub = rospy.Subscriber('/plot_measurements', Bool, self.plot_measurements)
 
+        self.camera_sim_pub = rospy.Publisher(self.ros_prefix + "/dse/pose_simulated", PoseMarkers, queue_size=1)
         self.camera_true_pub = rospy.Publisher(self.ros_prefix + "/diag/camera_true", PoseMarkers, queue_size=1)
         self.camera_error_pub = rospy.Publisher(self.ros_prefix + "/diag/camera_error", PoseMarkers, queue_size=1)
         self.est_pose_data = []
@@ -133,11 +134,8 @@ class measurement_error:
         est_poses_np = np.array(est_poses)
         est_poses_flat = est_poses_np.flatten()
 
-        print(np.shape(est_poses_flat))
         all = np.concatenate((est_poses_flat, true_poses_flat, poses_flat))
-        print(np.shape(all))
         self.all_csv_writer.writerow(all)
-
 
     # When the camera sends a measurement
     def measurement_callback(self, data):
@@ -151,6 +149,12 @@ class measurement_error:
             est_xyzypr.append(dse_lib.state_from_pose(pose))
         self.est_pose_data.append(self.order_poses(observed_ids, est_xyzypr))
         n = 1 + len(observed_ids)
+
+        sim_poses = PoseMarkers()
+        sim_poses.ids = observed_ids
+        from_tf = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
+        sim_poses.pose_array.header.stamp = rospy.Time.now()
+        sim_poses.pose_array.header.frame_id = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
 
         true_poses = PoseMarkers()
         true_poses.ids = observed_ids
@@ -172,10 +176,23 @@ class measurement_error:
             pose.orientation.z = quat[2]
             pose.orientation.w = quat[3]
             true_poses.pose_array.poses += [pose]
+
+            sim_pose = Pose()
+            true_eul = dse_lib.quat_from_pose2eul(pose.orientation)
+            true_state = np.concatenate((trans, true_eul))
+            noise = np.random.multivariate_normal([0, 0, 0, 0, 0, 0], dse_lib.gazebo_R_from_range(np.linalg.norm(trans)))
+            sim_state = true_state + noise
+            sim_pose.orientation = dse_lib.euler2quat_from_pose(sim_pose.orientation, sim_state[3:6, None])
+            sim_pose.position.x = sim_state[0]
+            sim_pose.position.y = sim_state[1]
+            sim_pose.position.z = sim_state[2]
+            sim_poses.pose_array.poses += [pose]
+
             # eul = dse_lib.quat2eul(pose.orientation)
             # true_xyzypr.append([trans[0], trans[1], trans[2], eul[0], eul[1], eul[2]])
             true_xyzypr.append(dse_lib.state_from_pose(pose))
         #self.camera_true_pub.publish(true_poses)
+        self.camera_sim_pub.publish(sim_poses)
         self.true_pose_data.append(self.order_poses(observed_ids, true_xyzypr))
 
         error_poses = PoseMarkers()
@@ -209,11 +226,11 @@ class measurement_error:
             error_xyzypr.append(dse_lib.state_from_pose(pose))
         #self.camera_true_pub.publish(error_poses)
         self.error_pose_data.append(self.order_poses(observed_ids, error_xyzypr))
-        self.send_poses_csv(self.order_poses(observed_ids, error_xyzypr),
-                            self.order_poses(observed_ids, true_xyzypr))
-        self.send_all_poses_csv(self.order_poses(observed_ids, error_xyzypr),
-                            self.order_poses(observed_ids, true_xyzypr),
-                            self.order_poses(observed_ids, est_xyzypr))
+        # self.send_poses_csv(self.order_poses(observed_ids, error_xyzypr),
+        #                     self.order_poses(observed_ids, true_xyzypr))
+        # self.send_all_poses_csv(self.order_poses(observed_ids, error_xyzypr),
+        #                     self.order_poses(observed_ids, true_xyzypr),
+        #                     self.order_poses(observed_ids, est_xyzypr))
     #
     # def plot_measurements(self, data):
     #

@@ -67,6 +67,40 @@ def aruco_R_from_range_3D(range):
     return r_var
 
 
+# Covariance based n distance as estimated for the aruco system (Needs more testing)
+def gazebo_R_from_range(range):
+    # Assuming linear error with a slope of:
+    # [x y z phi theta psi]
+    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
+    x = np.transpose([0.05, 0.05, 0.05, 0.05, 0.05, 0.05]) # Radians
+    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
+
+    range = (range + 0.001) * np.eye(6)
+    r_std = np.multiply(range, x)
+    r_var = np.multiply(r_std, r_std)
+    # Compute variance from standard deviation
+    return r_var
+
+
+# Covariance based n distance as estimated for the aruco system (Needs more testing)
+def gazebo_R_from_range_3D(range):
+    # Assuming linear error with a slope of:
+    # [x y z phi theta psi]
+    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
+    ### [x, y, theta] [m, m, radians]
+    # [0.2, 0.2, 0.2]
+    # was 20*
+    x = np.transpose([0.05, 0.05, 0.05]) # Radians
+    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
+
+    # Slope values are for 3-sigma error, so dividing by 3
+    range = (range + 0.001) * np.eye(3)
+    r_std = np.multiply(range, x)
+    r_var = np.multiply(r_std, r_std)
+    # Compute variance from standard deviation
+    return r_var
+
+
 # Compute the 2D rotation matrix from the angle theta
 def theta_2_rotm(theta):
     R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
@@ -560,6 +594,55 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
             z_pos = np.array(observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z)
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range(dist)
+            H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+
+        z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+
+    return R_0, H_0, z_0
+
+
+# Fill in the matrices R and H, as well as the vector z
+# R - Measurement Covariance
+# H - Measurement Jacobian
+# z - The measurement itself
+def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, R_var=0.001):
+    # Define the sizes of each variable
+    n_stored = len(id_list)
+    n_obs = len(observed_ids)
+    R_0 = R_var * np.eye(n_obs * dim_obs)
+    H_0 = np.zeros((n_obs * dim_obs, n_stored * dim_state))
+    z_0 = np.zeros((n_obs * dim_obs, 1))
+
+    # Fill in H and Z
+    for i in range(len(observed_ids)):
+        id = observed_ids[i]
+        index = np.where(id_list == id)[0][0]  # Index of observed agent
+        obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
+
+        i_low = dim_obs * i
+        i_high = i_low + dim_obs
+
+        # Compute the euler angles from the quaternion passed in
+        quat = np.zeros(4)
+        quat[0] = observed_poses[i].orientation.x
+        quat[1] = observed_poses[i].orientation.y
+        quat[2] = observed_poses[i].orientation.z
+        quat[3] = observed_poses[i].orientation.w
+        r = R.from_quat(quat)
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
+        z_eul = r.as_euler(euler_order)
+
+        # Different functions for 3D vs. 6D observation
+        if dim_obs == 3:
+            z_pos = np.array([observed_poses[i].position.x, observed_poses[i].position.y])
+            z_eul = [z_eul[0]]
+            dist = np.linalg.norm(z_pos)
+            R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
+            H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+        else:
+            z_pos = np.array(observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z)
+            dist = np.linalg.norm(z_pos)
+            R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
             H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
 
         z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]

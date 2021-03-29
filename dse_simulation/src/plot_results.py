@@ -33,7 +33,7 @@ roslib.load_manifest('dse_simulation')
 
 def main(args):
 
-    dump_file = "simulation_data_108862000000.p"
+    dump_file = "simulation_data_3_agents_fake_0_05.p"
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -50,7 +50,9 @@ def main(args):
             object_names[i] = 'agent_' + name[-1:]
             agent_names[agent_names.index(name)] = 'agent_' + name[-1:]
 
-    new_order = np.array([4, 5, 6, 0, 1, 2, 3])
+    agents = [4, 5, 6]
+    new_order = agents[:len(agent_ids)] + [0, 1, 2, 3]
+    new_order = np.array(new_order)
     for i in range(len(agent_ids)):
         true_poses[i] = true_poses[i][:, new_order, :]
         est_poses[i] = est_poses[i][:, new_order, :]

@@ -50,15 +50,14 @@ class information_filter:
         # Get parameters from launch file
         # self.n_params = 3
         # self.dim_state = 6
-        self.object_names = ['tb3_0', 'tb3_1', 'tb3_2', 'aruco_marker_0', 'aruco_marker_1', 'aruco_marker_2', 'aruco_marker_3']
-        self.object_ids = [5, 6, 7, 0, 1, 2, 3]
-        self.agent_ids = [5, 6, 7]
-        self.dim_state = 6
-
-        # self.object_names = rospy.get_param('~objects')
-        # self.object_ids = rospy.get_param('~object_ids')
-        # self.agent_ids = rospy.get_param('~agent_ids')
-        # self.dim_state = rospy.get_param('~dim_state', 6)
+        # self.object_names = ['tb3_0', 'tb3_1', 'tb3_2', 'aruco_marker_0', 'aruco_marker_1', 'aruco_marker_2', 'aruco_marker_3']
+        # self.object_ids = [5, 6, 7, 0, 1, 2, 3]
+        # self.agent_ids = [5, 6, 7]
+        # self.dim_state = 6
+        self.object_names = rospy.get_param('~objects')
+        self.object_ids = rospy.get_param('~object_ids')
+        self.agent_ids = rospy.get_param('~agent_ids')
+        self.dim_state = rospy.get_param('~dim_state', 6)
 
         n_params = len(self.agent_ids)
         self.store_data_sub = rospy.Subscriber('/store_data', Bool, self.store_data)
