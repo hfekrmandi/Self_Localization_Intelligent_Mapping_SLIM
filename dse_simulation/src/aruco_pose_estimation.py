@@ -7,10 +7,12 @@ import rospy
 import numpy as np
 import cv2
 from cv2 import aruco
+import tf2_ros
 import pickle
 import datetime
 import time
 from sensor_msgs.msg import Image
+from tf2_geometry_msgs import PoseStamped
 from geometry_msgs.msg import Pose
 from dse_msgs.msg import PoseMarkers
 from cv_bridge import CvBridge, CvBridgeError
@@ -64,6 +66,8 @@ class aruco_pose:
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber(self.ros_prefix + "/camera/rgb/image_raw", Image, self.callback)
         self.pose_pub = rospy.Publisher(self.ros_prefix + "/dse/pose_markers", PoseMarkers, queue_size=1)
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
 
     def callback(self, data):
         # Lowering the camera image rate
@@ -121,24 +125,23 @@ class aruco_pose:
 
             marker_pose = PoseMarkers()
             marker_pose.ids = list(ids.flatten())
+            pose_array = []
             for i in range(len(rvecs)):
-                pose = Pose()
-
-                pose.position.x = tvecs[i][0][2]
-                pose.position.y = -tvecs[i][0][0]
-                pose.position.z = tvecs[i][0][1]
-
+                pose = PoseStamped()
+                pose.header.stamp = rospy.Time.now()
+                pose.header.frame_id = self.ros_prefix[1:] + '/camera_rgb_frame'
                 rvecs_reordered = [rvecs[i][0][2], rvecs[i][0][0], rvecs[i][0][1]]
                 r = R.from_rotvec(rvecs_reordered)
                 quat = r.as_quat()
 
-                pose.orientation.x = quat[0]
-                pose.orientation.y = quat[1]
-                pose.orientation.z = quat[2]
-                pose.orientation.w = quat[3]
-                marker_pose.pose_array.poses += [pose]
-            marker_pose.pose_array.header.stamp = rospy.Time.now()
-            marker_pose.pose_array.header.frame_id = self.ros_prefix + '/camera_rgb_frame'
+                pose.pose.orientation.x = quat[0]
+                pose.pose.orientation.y = quat[1]
+                pose.pose.orientation.z = quat[2]
+                pose.pose.orientation.w = quat[3]
+
+                pose = self.tfBuffer.transform(pose, self.ros_prefix[1:] + '/base_link')
+                pose_array.append(pose)
+            marker_pose.pose_array = pose_array
             self.pose_pub.publish(marker_pose)
 
 

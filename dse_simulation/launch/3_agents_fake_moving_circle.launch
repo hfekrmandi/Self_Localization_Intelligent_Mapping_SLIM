@@ -1,49 +1,49 @@
 <launch>
   <arg name="first_tb3_prefix" default="tb3_0"/>
   <arg name="first_tb3_model"  default="burger_5"/>
-  <arg name="first_tb3_x" 	default="-1.0"/>
-  <arg name="first_tb3_y" 	default=" 0.0"/>
+  <arg name="first_tb3_x" 	default="-1.732"/>
+  <arg name="first_tb3_y" 	default=" -1.0"/>
   <arg name="first_tb3_z" 	default=" 0.0"/>
-  <arg name="first_tb3_yaw"    default=" 1.57079632679"/>
+  <arg name="first_tb3_yaw"    default=" 2.095"/>
   <arg name="first_tb3_id"     default=" 5"/>
   
   <arg name="second_tb3_prefix" default="tb3_1"/>
   <arg name="second_tb3_model" default="burger_6"/>
-  <arg name="second_tb3_x" 	default=" 0.0"/>
-  <arg name="second_tb3_y" 	default=" 0.0"/>
+  <arg name="second_tb3_x" 	default=" 1.732"/>
+  <arg name="second_tb3_y" 	default="-1.0"/>
   <arg name="second_tb3_z" 	default=" 0.0"/>
-  <arg name="second_tb3_yaw"   default=" 1.57079632679"/>
+  <arg name="second_tb3_yaw"   default=" 4.189"/>
   <arg name="second_tb3_id"    default=" 6"/>
 
   <arg name="third_tb3_prefix" default="tb3_2"/>
   <arg name="third_tb3_model"  default="burger_7"/>
-  <arg name="third_tb3_x" 	default=" 1.0"/>
-  <arg name="third_tb3_y" 	default=" 0.0"/>
+  <arg name="third_tb3_x" 	default=" 0.0"/>
+  <arg name="third_tb3_y" 	default=" 2.0"/>
   <arg name="third_tb3_z" 	default=" 0.0"/>
-  <arg name="third_tb3_yaw"    default=" 1.57079632679"/>
+  <arg name="third_tb3_yaw"    default=" 0.0"/>
   <arg name="third_tb3_id"     default=" 7"/>
 
-  <arg name="landmark_1_x"    default="-1.5"/>
-  <arg name="landmark_1_y"    default=" 3.0"/>
-  <arg name="landmark_1_yaw"  default=" 4.7124"/>
+  <arg name="landmark_1_x"    default=" 0.0"/>
+  <arg name="landmark_1_y"    default="-0.14"/>
+  <arg name="landmark_1_yaw"  default=" 1.57079632679"/>
   <arg name="landmark_1_id"   default="0"/>
   <arg name="landmark_1_name" default="aruco_marker_0"/>
 
-  <arg name="landmark_2_x"    default="-0.5"/>
-  <arg name="landmark_2_y"    default=" 3.0"/>
-  <arg name="landmark_2_yaw"  default=" 4.7124"/>
+  <arg name="landmark_2_x"    default="-0.14"/>
+  <arg name="landmark_2_y"    default=" 0.0"/>
+  <arg name="landmark_2_yaw"  default=" 3.14159265359"/>
   <arg name="landmark_2_id"   default="1"/>
   <arg name="landmark_2_name" default="aruco_marker_1"/>
 
-  <arg name="landmark_3_x"    default="-1.5"/>
-  <arg name="landmark_3_y"    default=" 6.0"/>
-  <arg name="landmark_3_yaw"  default=" 4.7124"/>
+  <arg name="landmark_3_x"    default=" 0.0"/>
+  <arg name="landmark_3_y"    default=" 0.14"/>
+  <arg name="landmark_3_yaw"  default=" -1.57079632679"/>
   <arg name="landmark_3_id"   default="2"/>
   <arg name="landmark_3_name" default="aruco_marker_2"/>
 
-  <arg name="landmark_4_x"    default="-0.5"/>
-  <arg name="landmark_4_y"    default=" 6.0"/>
-  <arg name="landmark_4_yaw"  default=" 4.7124"/>
+  <arg name="landmark_4_x"    default=" 0.14"/>
+  <arg name="landmark_4_y"    default=" 0.0"/>
+  <arg name="landmark_4_yaw"  default=" 0.0"/>
   <arg name="landmark_4_id"   default="3"/>
   <arg name="landmark_4_name" default="aruco_marker_3"/>
 
@@ -56,7 +56,7 @@
   <arg name="debug" default="false" />
   <arg name="gui" default="true" />
   <arg name="pause" default="false" />
-  <arg name="world" default="$(find dse_simulation)/world/2x2_aruco_landmarks_away_line.world" />
+  <arg name="world" default="$(find dse_simulation)/world/4_aruco_landmarks_square_in_circle.world" />
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world)" />
     <arg name="debug" value="$(arg debug)" />
@@ -156,6 +156,7 @@
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
       <param name="fwd_vel" type="double" value="0.1" />
+      <param name="radius" type="double" value="-2" />
     </node>
     <node pkg="dse_simulation" type="measurement_error.py" name="measurement_error_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
@@ -200,6 +201,7 @@
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg second_tb3_prefix)" />
       <param name="fwd_vel" type="double" value="0.1" />
+      <param name="radius" type="double" value="-2" />
     </node>
     <node pkg="dse_simulation" type="measurement_error.py" name="measurement_error_node" output="screen">
       <param name="prefix" value="$(arg second_tb3_prefix)" />
@@ -244,6 +246,7 @@
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg third_tb3_prefix)" />
       <param name="fwd_vel" type="double" value="0.1" />
+      <param name="radius" type="double" value="-2" />
     </node>
     <node pkg="dse_simulation" type="measurement_error.py" name="measurement_error_node" output="screen">
       <param name="prefix" value="$(arg third_tb3_prefix)" />

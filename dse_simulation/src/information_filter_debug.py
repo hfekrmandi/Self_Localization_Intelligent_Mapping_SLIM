@@ -120,7 +120,7 @@ class information_filter:
         self.t_last = rospy.get_time()
 
         # Grab the tag poses from the camera
-        observed_poses = data.pose_array.poses
+        observed_poses = data.pose_array
         observed_ids = data.ids
         n = 1 + len(observed_ids)
 

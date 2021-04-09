@@ -539,13 +539,13 @@ def fill_FQ(id_list, dt, x_11, dim_state, dim_obs):
             if dim_obs == 3:
 
                 # Q is a function of distance traveled in the last time step
-                Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
-                #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
+                #Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
             else:
                 # Q is a function of distance traveled in the last time step
-                Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
-                #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
+                #Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
 
     return F_0, Q_0
@@ -575,23 +575,23 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
 
         # Compute the euler angles from the quaternion passed in
         quat = np.zeros(4)
-        quat[0] = observed_poses[i].orientation.x
-        quat[1] = observed_poses[i].orientation.y
-        quat[2] = observed_poses[i].orientation.z
-        quat[3] = observed_poses[i].orientation.w
+        quat[0] = observed_poses[i].pose.orientation.x
+        quat[1] = observed_poses[i].pose.orientation.y
+        quat[2] = observed_poses[i].pose.orientation.z
+        quat[3] = observed_poses[i].pose.orientation.w
         r = R.from_quat(quat)
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
         z_eul = r.as_euler(euler_order)
 
         # Different functions for 3D vs. 6D observation
         if dim_obs == 3:
-            z_pos = np.array([observed_poses[i].position.x, observed_poses[i].position.y])
+            z_pos = np.array([observed_poses[i].pose.position.x, observed_poses[i].pose.position.y])
             z_eul = [z_eul[0]]
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range_3D(dist)
             H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
         else:
-            z_pos = np.array(observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z)
+            z_pos = np.array(observed_poses[i].pose.position.x, observed_poses[i].pose.position.y, observed_poses[i].pose.position.z)
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range(dist)
             H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
@@ -624,23 +624,23 @@ def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_or
 
         # Compute the euler angles from the quaternion passed in
         quat = np.zeros(4)
-        quat[0] = observed_poses[i].orientation.x
-        quat[1] = observed_poses[i].orientation.y
-        quat[2] = observed_poses[i].orientation.z
-        quat[3] = observed_poses[i].orientation.w
+        quat[0] = observed_poses[i].pose.orientation.x
+        quat[1] = observed_poses[i].pose.orientation.y
+        quat[2] = observed_poses[i].pose.orientation.z
+        quat[3] = observed_poses[i].pose.orientation.w
         r = R.from_quat(quat)
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
         z_eul = r.as_euler(euler_order)
 
         # Different functions for 3D vs. 6D observation
         if dim_obs == 3:
-            z_pos = np.array([observed_poses[i].position.x, observed_poses[i].position.y])
+            z_pos = np.array([observed_poses[i].pose.position.x, observed_poses[i].pose.position.y])
             z_eul = [z_eul[0]]
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
             H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
         else:
-            z_pos = np.array(observed_poses[i].position.x, observed_poses[i].position.y, observed_poses[i].position.z)
+            z_pos = np.array(observed_poses[i].pose.position.x, observed_poses[i].pose.position.y, observed_poses[i].pose.position.z)
             dist = np.linalg.norm(z_pos)
             R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
             H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)

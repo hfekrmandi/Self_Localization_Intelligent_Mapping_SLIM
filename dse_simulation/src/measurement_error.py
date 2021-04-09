@@ -7,6 +7,7 @@ import numpy as np
 import datetime
 import time
 from geometry_msgs.msg import Twist
+from tf2_geometry_msgs import PoseStamped
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Bool
 from dse_msgs.msg import PoseMarkers
@@ -16,7 +17,7 @@ from std_msgs.msg import MultiArrayDimension
 from dse_msgs.msg import InfFilterPartials
 from dse_msgs.msg import InfFilterResults
 from scipy.spatial.transform import Rotation as R
-import tf
+import tf2_ros
 import csv
 import matplotlib.pyplot as plt
 
@@ -39,13 +40,13 @@ class measurement_error:
         self.init_ids = rospy.get_param('~initial_ids', [])
 
         self.id_to_tf = {
-            0:'/aruco_marker_0',
-            1:'/aruco_marker_1',
-            2:'/aruco_marker_2',
-            3:'/aruco_marker_3',
-            5:'/tb3_0',
-            6:'/tb3_1',
-            7:'/tb3_2',
+            0:'aruco_marker_0',
+            1:'aruco_marker_1',
+            2:'aruco_marker_2',
+            3:'aruco_marker_3',
+            5:'tb3_0',
+            6:'tb3_1',
+            7:'tb3_2',
         }
 
         # self.data_file = open('/home/alex/error_data.csv', mode='w')
@@ -89,6 +90,8 @@ class measurement_error:
         self.est_pose_data = []
         self.true_pose_data = []
         self.error_pose_data = []
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
 
     def order_poses(self, these_ids, poses):
         all_poses = []
@@ -101,48 +104,49 @@ class measurement_error:
                 all_poses.append(nothing[:, None])
         return all_poses
 
-    def send_poses_csv(self, error_poses, true_poses):
-        poses_np = np.array(error_poses)
-        poses_flat = poses_np.flatten()
-        true_poses_np = np.array(true_poses)
-        true_poses_flat = true_poses_np.flatten()
-        comp_errors = []
-        for i in range(len(self.init_ids)):
-            i_min = i*6
-            if poses_flat[i_min] == -1:
-                true_dist = -1
-                dist = -1
-                angle_sqr = -1
-            else:
-                true_dist = np.sqrt(true_poses_flat[i_min]**2 + true_poses_flat[i_min+1]**2 + true_poses_flat[i_min+2]**2)
-                dist = np.sqrt(poses_flat[i_min]**2 + poses_flat[i_min+1]**2 + poses_flat[i_min+2]**2)
-                if poses_flat[i_min+5] < 0:
-                    poses_flat[i_min + 5] = poses_flat[i_min + 5] + np.pi
-                else:
-                    poses_flat[i_min + 5] = poses_flat[i_min + 5] - np.pi
-                angle_sqr = np.sqrt(poses_flat[i_min+3]**2 + poses_flat[i_min+4]**2 + poses_flat[i_min+5]**2)
-            comp_errors.append(true_dist)
-            comp_errors.append(dist)
-            comp_errors.append(angle_sqr)
-        self.csv_writer.writerow(comp_errors)
-
-    def send_all_poses_csv(self, error_poses, true_poses, est_poses):
-        poses_np = np.array(error_poses)
-        poses_flat = poses_np.flatten()
-        true_poses_np = np.array(true_poses)
-        true_poses_flat = true_poses_np.flatten()
-        est_poses_np = np.array(est_poses)
-        est_poses_flat = est_poses_np.flatten()
-
-        all = np.concatenate((est_poses_flat, true_poses_flat, poses_flat))
-        self.all_csv_writer.writerow(all)
+    # def send_poses_csv(self, error_poses, true_poses):
+    #     poses_np = np.array(error_poses)
+    #     poses_flat = poses_np.flatten()
+    #     true_poses_np = np.array(true_poses)
+    #     true_poses_flat = true_poses_np.flatten()
+    #     comp_errors = []
+    #     for i in range(len(self.init_ids)):
+    #         i_min = i*6
+    #         if poses_flat[i_min] == -1:
+    #             true_dist = -1
+    #             dist = -1
+    #             angle_sqr = -1
+    #         else:
+    #             true_dist = np.sqrt(true_poses_flat[i_min]**2 + true_poses_flat[i_min+1]**2 + true_poses_flat[i_min+2]**2)
+    #             dist = np.sqrt(poses_flat[i_min]**2 + poses_flat[i_min+1]**2 + poses_flat[i_min+2]**2)
+    #             if poses_flat[i_min+5] < 0:
+    #                 poses_flat[i_min + 5] = poses_flat[i_min + 5] + np.pi
+    #             else:
+    #                 poses_flat[i_min + 5] = poses_flat[i_min + 5] - np.pi
+    #             angle_sqr = np.sqrt(poses_flat[i_min+3]**2 + poses_flat[i_min+4]**2 + poses_flat[i_min+5]**2)
+    #         comp_errors.append(true_dist)
+    #         comp_errors.append(dist)
+    #         comp_errors.append(angle_sqr)
+    #     self.csv_writer.writerow(comp_errors)
+    #
+    # def send_all_poses_csv(self, error_poses, true_poses, est_poses):
+    #     poses_np = np.array(error_poses)
+    #     poses_flat = poses_np.flatten()
+    #     true_poses_np = np.array(true_poses)
+    #     true_poses_flat = true_poses_np.flatten()
+    #     est_poses_np = np.array(est_poses)
+    #     est_poses_flat = est_poses_np.flatten()
+    #
+    #     all = np.concatenate((est_poses_flat, true_poses_flat, poses_flat))
+    #     self.all_csv_writer.writerow(all)
 
     # When the camera sends a measurement
     def measurement_callback(self, data):
-        listener = tf.TransformListener()
-
         # Grab the tag poses from the camera
-        observed_poses = data.pose_array.poses
+        observed_poses = []
+        for pose_stamped in data.pose_array:
+            observed_poses.append(pose_stamped.pose)
+
         observed_ids = data.ids
         est_xyzypr = []
         for pose in observed_poses:
@@ -152,33 +156,37 @@ class measurement_error:
 
         sim_poses = PoseMarkers()
         sim_poses.ids = observed_ids
-        from_tf = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
-        sim_poses.pose_array.header.stamp = rospy.Time.now()
-        sim_poses.pose_array.header.frame_id = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
+        from_tf = self.id_to_tf[self.this_agent_id] + '/base_link'
 
-        true_poses = PoseMarkers()
-        true_poses.ids = observed_ids
-        from_tf = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
-        true_poses.pose_array.header.stamp = rospy.Time.now()
-        true_poses.pose_array.header.frame_id = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
-        true_xyzypr = []
+        # true_poses = PoseMarkers()
+        # true_poses.ids = observed_ids
+        # from_tf = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
+        # true_poses.pose_array.header.stamp = rospy.Time.now()
+        # true_poses.pose_array.header.frame_id = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
+        # true_xyzypr = []
         for id in observed_ids:
-            to_tf = self.id_to_tf[id] + ''
-            listener.waitForTransform(from_tf, to_tf, rospy.Time(), rospy.Duration(5))
-            (trans, quat) = listener.lookupTransform(from_tf, to_tf, rospy.Time(0))
+            # If we're observing a turtlebot, we need the aruco_tag_link frame
+            if self.id_to_tf[id][0:3] == 'tb3':
+                to_tf = self.id_to_tf[id] + '/aruco_tag_link'
+            else:
+                to_tf = self.id_to_tf[id]
 
-            pose = Pose()
-            pose.position.x = trans[0]
-            pose.position.y = trans[1]
-            pose.position.z = trans[2]
-            pose.orientation.x = quat[0]
-            pose.orientation.y = quat[1]
-            pose.orientation.z = quat[2]
-            pose.orientation.w = quat[3]
-            true_poses.pose_array.poses += [pose]
+            transform = self.tfBuffer.lookup_transform(from_tf, to_tf, rospy.Time(0))
 
-            sim_pose = Pose()
+            pose_stamped = PoseStamped()
+            pose_stamped.header.stamp = rospy.Time.now()
+            pose_stamped.header.frame_id = self.id_to_tf[self.this_agent_id] + '/base_link'
+            pose = pose_stamped.pose
+            pose.position = transform.transform.translation
+            pose.orientation = transform.transform.rotation
+            # true_poses.pose_array.append(pose_stamped)
+
+            sim_pose_stamped = PoseStamped()
+            sim_pose_stamped.header.stamp = rospy.Time.now()
+            sim_pose_stamped.header.frame_id = self.id_to_tf[self.this_agent_id] + '/base_link'
+            sim_pose = sim_pose_stamped.pose
             true_eul = dse_lib.quat_from_pose2eul(pose.orientation)
+            trans = [pose.position.x, pose.position.y, pose.position.z]
             true_state = np.concatenate((trans, true_eul))
             noise = np.random.multivariate_normal([0, 0, 0, 0, 0, 0], dse_lib.gazebo_R_from_range(np.linalg.norm(trans)))
             sim_state = true_state + noise
@@ -186,51 +194,51 @@ class measurement_error:
             sim_pose.position.x = sim_state[0]
             sim_pose.position.y = sim_state[1]
             sim_pose.position.z = sim_state[2]
-            sim_poses.pose_array.poses += [pose]
+            sim_poses.pose_array.append(pose_stamped)
 
             # eul = dse_lib.quat2eul(pose.orientation)
             # true_xyzypr.append([trans[0], trans[1], trans[2], eul[0], eul[1], eul[2]])
-            true_xyzypr.append(dse_lib.state_from_pose(pose))
+            # true_xyzypr.append(dse_lib.state_from_pose(pose))
         #self.camera_true_pub.publish(true_poses)
         self.camera_sim_pub.publish(sim_poses)
-        self.true_pose_data.append(self.order_poses(observed_ids, true_xyzypr))
+        # self.true_pose_data.append(self.order_poses(observed_ids, true_xyzypr))
 
-        error_poses = PoseMarkers()
-        error_poses.ids = observed_ids
-        error_poses.pose_array.header.stamp = rospy.Time.now()
-        error_poses.pose_array.header.frame_id = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
-        error_xyzypr = []
-        for i in range(len(observed_ids)):
-            meas_pose = data.pose_array.poses[i]
-            meas_eul = dse_lib.quat_from_pose2eul(meas_pose.orientation)
-            r = R.from_euler(dse_constants.EULER_ORDER, meas_eul)
-            meas_rotm = r.as_matrix()
-            true_pose = true_poses.pose_array.poses[i]
-            true_eul = dse_lib.quat_from_pose2eul(true_pose.orientation)
-            r = R.from_euler(dse_constants.EULER_ORDER, true_eul)
-            true_rotm = r.as_matrix()
-            error_rotm = meas_rotm.dot(true_rotm.T)
-            r = R.from_matrix(error_rotm)
-            error_quat = r.as_quat()
-
-            pose = Pose()
-            pose.position.x = true_pose.position.x - meas_pose.position.x
-            pose.position.y = true_pose.position.y - meas_pose.position.y
-            pose.position.z = true_pose.position.z - meas_pose.position.z
-
-            pose.orientation.x = error_quat[0]
-            pose.orientation.y = error_quat[1]
-            pose.orientation.z = error_quat[2]
-            pose.orientation.w = error_quat[3]
-            error_poses.pose_array.poses += [pose]
-            error_xyzypr.append(dse_lib.state_from_pose(pose))
-        #self.camera_true_pub.publish(error_poses)
-        self.error_pose_data.append(self.order_poses(observed_ids, error_xyzypr))
-        # self.send_poses_csv(self.order_poses(observed_ids, error_xyzypr),
-        #                     self.order_poses(observed_ids, true_xyzypr))
-        # self.send_all_poses_csv(self.order_poses(observed_ids, error_xyzypr),
-        #                     self.order_poses(observed_ids, true_xyzypr),
-        #                     self.order_poses(observed_ids, est_xyzypr))
+        # error_poses = PoseMarkers()
+        # error_poses.ids = observed_ids
+        # error_poses.pose_array.header.stamp = rospy.Time.now()
+        # error_poses.pose_array.header.frame_id = self.id_to_tf[self.this_agent_id] + '/camera_rgb_frame'
+        # error_xyzypr = []
+        # for i in range(len(observed_ids)):
+        #     meas_pose = data.pose_array.poses[i]
+        #     meas_eul = dse_lib.quat_from_pose2eul(meas_pose.orientation)
+        #     r = R.from_euler(dse_constants.EULER_ORDER, meas_eul)
+        #     meas_rotm = r.as_matrix()
+        #     true_pose = true_poses.pose_array.poses[i]
+        #     true_eul = dse_lib.quat_from_pose2eul(true_pose.orientation)
+        #     r = R.from_euler(dse_constants.EULER_ORDER, true_eul)
+        #     true_rotm = r.as_matrix()
+        #     error_rotm = meas_rotm.dot(true_rotm.T)
+        #     r = R.from_matrix(error_rotm)
+        #     error_quat = r.as_quat()
+        #
+        #     pose = Pose()
+        #     pose.position.x = true_pose.position.x - meas_pose.position.x
+        #     pose.position.y = true_pose.position.y - meas_pose.position.y
+        #     pose.position.z = true_pose.position.z - meas_pose.position.z
+        #
+        #     pose.orientation.x = error_quat[0]
+        #     pose.orientation.y = error_quat[1]
+        #     pose.orientation.z = error_quat[2]
+        #     pose.orientation.w = error_quat[3]
+        #     error_poses.pose_array.poses += [pose]
+        #     error_xyzypr.append(dse_lib.state_from_pose(pose))
+        # #self.camera_true_pub.publish(error_poses)
+        # self.error_pose_data.append(self.order_poses(observed_ids, error_xyzypr))
+        # # self.send_poses_csv(self.order_poses(observed_ids, error_xyzypr),
+        # #                     self.order_poses(observed_ids, true_xyzypr))
+        # # self.send_all_poses_csv(self.order_poses(observed_ids, error_xyzypr),
+        # #                     self.order_poses(observed_ids, true_xyzypr),
+        # #                     self.order_poses(observed_ids, est_xyzypr))
     #
     # def plot_measurements(self, data):
     #
