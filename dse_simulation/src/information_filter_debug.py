@@ -34,6 +34,8 @@ class information_filter:
         self.dim_state = rospy.get_param('~dim_state')
         self.init_ids = rospy.get_param('~initial_ids', [])
         self.init_est = rospy.get_param('~initial_estimates', [])
+        self.fixed_ids = np.array(rospy.get_param('~fixed_ids', []))
+        self.fixed_est = np.array(rospy.get_param('~fixed_estimates', []))
         self.pub_errors = rospy.get_param('~pub_errors', 0)
 
         # self.ros_prefix = '/tb3_0'
@@ -141,8 +143,10 @@ class information_filter:
         # H - Measurement Jacobian
         # z - The measurement itself
         # This function is defined in src/dse_lib.py
+        # R_0, H_0, z_0 = dse_lib.fill_RHz_gazebo(id_list, self.this_agent_id, observed_ids, observed_poses, x_11,
+        #                                  self.euler_order, self.dim_state, self.dim_obs)
         R_0, H_0, z_0 = dse_lib.fill_RHz_gazebo(id_list, self.this_agent_id, observed_ids, observed_poses, x_11,
-                                         self.euler_order, self.dim_state, self.dim_obs)
+                                         self.euler_order, self.dim_state, self.dim_obs, self.fixed_ids, self.fixed_est)
 
         # F - Motion Jacobian
         # Q - Motion Covariance

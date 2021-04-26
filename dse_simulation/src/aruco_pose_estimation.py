@@ -31,7 +31,7 @@ class aruco_pose:
         #     self.ros_prefix = '/' + self.ros_prefix
         # # side length of tag in meters
         # self.markerLength = 0.1
-        # self.cal_file = 'calibration_1080p.p'
+        # self.cal_file = 'calibrationSave_gazebo.p'
 
         # Get parameters from launch file
         self.ros_prefix = rospy.get_param('~prefix', '')
@@ -50,6 +50,12 @@ class aruco_pose:
         print(self.distCoeffs)
         para = aruco.DetectorParameters_create()
         para.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
+
+        # # import saved calibration information
+        # # calibrationSave.p should be correct for laptop webcam
+        # cal2 = pickle.load(open(os.path.join(sys.path[0], 'calibration_1080p.p'), "rb"))
+        # self.retval2, self.cameraMatrix2, self.distCoeffs2, self.rvecsUnused2, self.tvecsUnused2 = cal2
+        # print(self.distCoeffs2)
 
         # cap = cv2.VideoCapture(0)
         #
@@ -96,8 +102,6 @@ class aruco_pose:
         rvecs, tvecs, objPoints = aruco.estimatePoseSingleMarkers(corners, self.markerLength, self.cameraMatrix,
                                                                   self.distCoeffs, None,
                                                                   None, None)
-
-        # drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, length) -> image
 
         if (ids is not None):
             # print('translation vectors')

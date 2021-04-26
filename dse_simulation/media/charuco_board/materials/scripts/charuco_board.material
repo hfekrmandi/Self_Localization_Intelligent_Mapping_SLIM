@@ -1,0 +1,14 @@
+material charuco_board/Diffuse
+{
+  receive_shadows off
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture charuco.png
+      }
+    }
+  }
+}

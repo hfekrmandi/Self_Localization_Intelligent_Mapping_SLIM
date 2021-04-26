@@ -168,7 +168,9 @@
   </link>
 
   <joint name="camera_joint" type="fixed">
-    <origin xyz="0.064 -0.065 0.094" rpy="0 0 -1.57"/>
+    <origin xyz="0.064 -0.065 0.094" rpy="0 0 0"/>
+    <!-- Noramal: <origin xyz="0.064 -0.065 0.094" rpy="0 0 0"/>-->
+    <!-- Turned right: <origin xyz="0.064 -0.065 0.094" rpy="0 0 -1.57"/>-->
     <parent link="base_link"/>
     <child link="camera_link"/>
   </joint>

@@ -1,45 +1,46 @@
 <launch>
   <arg name="first_tb3_prefix" default="tb3_0"/>
   <arg name="first_tb3_model"  default="burger_5"/>
-  <arg name="first_tb3_x" 	default="-1.0"/>
-  <arg name="first_tb3_y" 	default=" 0.0"/>
+  <arg name="first_tb3_x" 	default=" 0.0"/>
+  <arg name="first_tb3_y" 	default=" 2.0"/>
   <arg name="first_tb3_z" 	default=" 0.0"/>
-  <arg name="first_tb3_yaw"    default=" 1.57079632679"/>
+  <arg name="first_tb3_yaw"    default=" 0"/>
   <arg name="first_tb3_id"     default=" 5"/>
   
-  <arg name="landmark_1_x"    default="-1.5"/>
-  <arg name="landmark_1_y"    default=" 3.0"/>
+  <arg name="landmark_1_x"    default=" 0.0"/>
+  <arg name="landmark_1_y"    default="-0.09"/>
   <arg name="landmark_1_yaw"  default=" 4.7124"/>
   <arg name="landmark_1_id"   default="0"/>
   <arg name="landmark_1_name" default="aruco_marker_0"/>
 
-  <arg name="landmark_2_x"    default="-0.5"/>
-  <arg name="landmark_2_y"    default=" 3.0"/>
-  <arg name="landmark_2_yaw"  default=" 4.7124"/>
+  <arg name="landmark_2_x"    default="-0.09"/>
+  <arg name="landmark_2_y"    default=" 0.0"/>
+  <arg name="landmark_2_yaw"  default=" 0.0"/>
   <arg name="landmark_2_id"   default="1"/>
   <arg name="landmark_2_name" default="aruco_marker_1"/>
 
-  <arg name="landmark_3_x"    default="-1.5"/>
-  <arg name="landmark_3_y"    default=" 6.0"/>
-  <arg name="landmark_3_yaw"  default=" 4.7124"/>
+  <arg name="landmark_3_x"    default=" 0.0"/>
+  <arg name="landmark_3_y"    default=" 0.09"/>
+  <arg name="landmark_3_yaw"  default=" 3.14159265359"/>
   <arg name="landmark_3_id"   default="2"/>
   <arg name="landmark_3_name" default="aruco_marker_2"/>
 
-  <arg name="landmark_4_x"    default="-0.5"/>
-  <arg name="landmark_4_y"    default=" 6.0"/>
-  <arg name="landmark_4_yaw"  default=" 4.7124"/>
+  <arg name="landmark_4_x"    default=" 0.09"/>
+  <arg name="landmark_4_y"    default=" 0.0"/>
+  <arg name="landmark_4_yaw"  default=" 3.14159265359"/>
   <arg name="landmark_4_id"   default="3"/>
   <arg name="landmark_4_name" default="aruco_marker_3"/>
 
   <arg name="dim_state"  default="6"/>
   <arg name="marker_length"  default="0.1"/>
-  <arg name="aruco_cal_file"  default="calibration_1080p.p"/>
+  <arg name="aruco_cal_file"  default="calibrationSave_gazebo.p"/>
+  <arg name="data_skip"  default="4"/>
   
   <!-- Launch gazebo world -->
   <arg name="debug" default="false" />
   <arg name="gui" default="true" />
   <arg name="pause" default="false" />
-  <arg name="world" default="$(find dse_simulation)/world/2x2_aruco_landmarks_away_line.world" />
+  <arg name="world" default="$(find dse_simulation)/world/4_aruco_landmarks_square_in_circle.world" />
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world)" />
     <arg name="debug" value="$(arg debug)" />
@@ -69,6 +70,7 @@
   <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg first_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg first_tb3_prefix)/odom 100"/>
   
   <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">
+    <param name="n_params" value="3" />
     <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg landmark_1_name), $(arg landmark_2_name), $(arg landmark_3_name), $(arg landmark_4_name)]</rosparam>
     <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id), $(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]</rosparam>
     <rosparam param="agent_ids" subst_value="True"> [$(arg first_tb3_id)]</rosparam>
@@ -76,6 +78,7 @@
   </node>
 
   <node pkg="dse_simulation" type="consensus_10hz.py" name="dse_consensus_node" output="screen">
+    <param name="n_params" value="3" />
     <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix)]</rosparam>
     <param name="dim_state" type="int" value="$(arg dim_state)" />
   </node>
@@ -85,21 +88,26 @@
       <param name="prefix" value="$(arg first_tb3_prefix)" />
       <param name="marker_length" type="double" value="$(arg marker_length)" />
       <param name="calibration_file" value="$(arg aruco_cal_file)" />
+      <param name="data_skip" value="$(arg data_skip)" />
     </node>
-    <node pkg="dse_simulation" type="information_filter.py" name="information_filter_node" output="screen">
+    <node pkg="dse_simulation" type="information_filter_debug.py" name="information_filter_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
       <param name="id" type="int" value="$(arg first_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
       <rosparam param="initial_ids" subst_value="True"> 
-                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
-                 $(arg first_tb3_id)]
+                [$(arg first_tb3_id)]
       </rosparam>
       <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0]
+      </rosparam>
+      <rosparam param="fixed_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]
+      </rosparam>
+      <rosparam param="fixed_estimates" subst_value="True"> 
                 [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
                  $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
                  $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
-                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
-                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0.1, 0]
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0]
       </rosparam>
     </node>
     <node pkg="dse_simulation" type="visualize_estimates_odometry.py" name="dse_gazebo_visualization_node" output="screen">
@@ -110,6 +118,15 @@
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
       <param name="fwd_vel" type="double" value="0.1" />
+      <param name="radius" type="double" value="-2" />
+    </node>
+    <node pkg="dse_simulation" type="measurement_error.py" name="measurement_error_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <rosparam param="initial_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
+                 $(arg first_tb3_id)]
+      </rosparam>
     </node>
   </group>
 </launch>

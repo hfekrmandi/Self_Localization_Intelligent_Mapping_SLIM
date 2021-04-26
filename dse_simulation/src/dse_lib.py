@@ -529,24 +529,24 @@ def fill_FQ(id_list, dt, x_11, dim_state, dim_obs):
         i_low = dim_state * i
         i_high = i_low + dim_state
 
-        # If we are looking at ID <5, it is a waypoint and as such doesn't move (F is identity matrix)
-        if id_list[i] < 5:
-            #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001/dt)
-            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
-            F_0[i_low:i_high, i_low:i_high] = f_eye(dim_state)
-        else:
-            # Else use the unicycle model
-            if dim_obs == 3:
+        # # If we are looking at ID <5, it is a waypoint and as such doesn't move (F is identity matrix)
+        # if id_list[i] < 5:
+        #     #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001/dt)
+        #     Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
+        #     F_0[i_low:i_high, i_low:i_high] = f_eye(dim_state)
+        # else:
+        #     # Else use the unicycle model
+        if dim_obs == 3:
 
-                # Q is a function of distance traveled in the last time step
-                #Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
-                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
-                F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
-            else:
-                # Q is a function of distance traveled in the last time step
-                #Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
-                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
-                F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
+            # Q is a function of distance traveled in the last time step
+            #Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
+            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
+            F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
+        else:
+            # Q is a function of distance traveled in the last time step
+            #Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
+            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
+            F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
 
     return F_0, Q_0
 
@@ -605,47 +605,87 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
 # R - Measurement Covariance
 # H - Measurement Jacobian
 # z - The measurement itself
-def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, R_var=0.001):
+def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, fixed_ids, fixed_est):
     # Define the sizes of each variable
     n_stored = len(id_list)
     n_obs = len(observed_ids)
+    R_var = 0.001
     R_0 = R_var * np.eye(n_obs * dim_obs)
     H_0 = np.zeros((n_obs * dim_obs, n_stored * dim_state))
     z_0 = np.zeros((n_obs * dim_obs, 1))
 
+    zero_3D = np.zeros((3, 1))
+    zero_6D = np.zeros((6, 1))
+
     # Fill in H and Z
     for i in range(len(observed_ids)):
         id = observed_ids[i]
-        index = np.where(id_list == id)[0][0]  # Index of observed agent
-        obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
+        if id in fixed_ids:
+            index = np.where(fixed_ids == id)[0][0]  # Index of observed agent
+            obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
 
-        i_low = dim_obs * i
-        i_high = i_low + dim_obs
+            i_low = dim_obs * i
+            i_high = i_low + dim_obs
 
-        # Compute the euler angles from the quaternion passed in
-        quat = np.zeros(4)
-        quat[0] = observed_poses[i].pose.orientation.x
-        quat[1] = observed_poses[i].pose.orientation.y
-        quat[2] = observed_poses[i].pose.orientation.z
-        quat[3] = observed_poses[i].pose.orientation.w
-        r = R.from_quat(quat)
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
-        z_eul = r.as_euler(euler_order)
+            fixed_low = dim_obs * index
+            fixed_high = fixed_low + dim_obs
 
-        # Different functions for 3D vs. 6D observation
-        if dim_obs == 3:
-            z_pos = np.array([observed_poses[i].pose.position.x, observed_poses[i].pose.position.y])
-            z_eul = [z_eul[0]]
-            dist = np.linalg.norm(z_pos)
-            R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
-            H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+            # Different functions for 3D vs. 6D observation
+            if dim_obs == 3:
+                z_meas = state_from_pose_3D(observed_poses[i].pose)
+                # Compute the estimated position of this agent relative to the global zero.
+                #print('tag ', id, ' in frame agent 0 = ', z_meas)
+                agent2_in_frame_agent1 = agent2_to_frame_agent1_3D(z_meas, zero_3D)
+                #print('inverted measurement ', agent2_in_frame_agent1)
+                fixed_state = fixed_est[fixed_low:fixed_high, None]
+                #print('tag 0 in global', fixed_state)
+                z = agent2_from_frame_agent1_3D(fixed_state, agent2_in_frame_agent1)
+                #print('agent 0 in frame tag ', id, ' = ', z)
+                dist = np.linalg.norm(z[0:2, 0])
+                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
+                H_0 = h_camera_zero_3D(H_0, x_11, i, obs_index, dim_state, dim_obs)
+            else:
+                z_meas = state_from_pose(observed_poses[i].pose)
+                # Compute the estimated position of this agent relative to the global zero.
+                agent2_in_frame_agent1 = agent2_to_frame_agent1(z_meas, zero_6D)
+                z = agent2_from_frame_agent1(fixed_est[index, None], agent2_in_frame_agent1)
+                dist = np.linalg.norm(z[0:3, 0])
+                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
+                H_0 = h_camera_zero(H_0, x_11, i, obs_index, dim_state, dim_obs)
+
+            z_0[i_low:i_high] = z
+
         else:
-            z_pos = np.array(observed_poses[i].pose.position.x, observed_poses[i].pose.position.y, observed_poses[i].pose.position.z)
-            dist = np.linalg.norm(z_pos)
-            R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
-            H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+            index = np.where(id_list == id)[0][0]  # Index of observed agent
+            obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
 
-        z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+            i_low = dim_obs * i
+            i_high = i_low + dim_obs
+
+            # Compute the euler angles from the quaternion passed in
+            quat = np.zeros(4)
+            quat[0] = observed_poses[i].pose.orientation.x
+            quat[1] = observed_poses[i].pose.orientation.y
+            quat[2] = observed_poses[i].pose.orientation.z
+            quat[3] = observed_poses[i].pose.orientation.w
+            r = R.from_quat(quat)
+            # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
+            z_eul = r.as_euler(euler_order)
+
+            # Different functions for 3D vs. 6D observation
+            if dim_obs == 3:
+                z_pos = np.array([observed_poses[i].pose.position.x, observed_poses[i].pose.position.y])
+                z_eul = [z_eul[0]]
+                dist = np.linalg.norm(z_pos)
+                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
+                H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+            else:
+                z_pos = np.array(observed_poses[i].pose.position.x, observed_poses[i].pose.position.y, observed_poses[i].pose.position.z)
+                dist = np.linalg.norm(z_pos)
+                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
+                H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+
+            z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
 
     return R_0, H_0, z_0
 
@@ -760,6 +800,35 @@ def h_camera(H, x, meas_index, agent1, agent2, dim_state, dim_obs):
     Jacobian = np.array(dual_relative_obs_jacobian(x1, x2))
     H[meas_row_min:meas_row_max, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
     H[meas_row_min:meas_row_max, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
+    return H
+
+# Define the measurement jacobian for a camera (3D-observation)
+def h_camera_zero_3D(H, x, meas_index, agent, dim_state, dim_obs):
+    agent_row_min = dim_state * agent
+    agent_row_max = agent_row_min + dim_obs
+    meas_row_min = dim_obs * meas_index
+    meas_row_max = meas_row_min + dim_obs
+
+    x = x[agent_row_min:agent_row_max]
+    zero = np.zeros((3, 1))
+
+    Jacobian = np.array(dual_relative_obs_jacobian_3D(zero, x))
+    H[meas_row_min:meas_row_max, agent_row_min:agent_row_max] = Jacobian[:, 0:dim_obs]
+    return H
+
+
+# Define the measurement jacobian for a camera
+def h_camera_zero(H, x, meas_index, agent, dim_state, dim_obs):
+    agent_row_min = dim_state * agent
+    agent_row_max = agent_row_min + dim_obs
+    meas_row_min = dim_obs * meas_index
+    meas_row_max = meas_row_min + dim_obs
+
+    x = x[agent_row_min:agent_row_max]
+    zero = np.zeros((6, 1))
+
+    Jacobian = np.array(dual_relative_obs_jacobian(zero, x))
+    H[meas_row_min:meas_row_max, agent_row_min:agent_row_max] = Jacobian[:, 0:dim_obs]
     return H
 
 

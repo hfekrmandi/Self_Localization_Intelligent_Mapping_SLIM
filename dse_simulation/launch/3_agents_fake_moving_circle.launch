@@ -135,17 +135,21 @@
       <param name="id" type="int" value="$(arg first_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
       <rosparam param="initial_ids" subst_value="True"> 
-                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
-                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
+                [$(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
       </rosparam>
       <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
+                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
+                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+      </rosparam>
+      <rosparam param="fixed_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]
+      </rosparam>
+      <rosparam param="fixed_estimates" subst_value="True"> 
                 [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
                  $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
                  $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
-                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
-                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
-                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
-                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0]
       </rosparam>
     </node>
     <node pkg="dse_simulation" type="visualize_estimates_odometry.py" name="dse_gazebo_visualization_node" output="screen">
@@ -180,17 +184,21 @@
       <param name="id" type="int" value="$(arg second_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
       <rosparam param="initial_ids" subst_value="True"> 
-                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
-                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
+                [$(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
       </rosparam>
       <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
+                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
+                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+      </rosparam>
+      <rosparam param="fixed_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]
+      </rosparam>
+      <rosparam param="fixed_estimates" subst_value="True"> 
                 [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
                  $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
                  $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
-                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
-                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
-                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
-                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0]
       </rosparam>
     </node>
     <node pkg="dse_simulation" type="visualize_estimates_odometry.py" name="dse_gazebo_visualization_node" output="screen">
@@ -225,17 +233,21 @@
       <param name="id" type="int" value="$(arg third_tb3_id)" />
       <param name="dim_state" type="int" value="$(arg dim_state)" />
       <rosparam param="initial_ids" subst_value="True"> 
-                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id), 
-                 $(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
+                [$(arg first_tb3_id),  $(arg second_tb3_id), $(arg third_tb3_id)]
       </rosparam>
       <rosparam param="initial_estimates" subst_value="True"> 
+                [$(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
+                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
+                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+      </rosparam>
+      <rosparam param="fixed_ids" subst_value="True"> 
+                [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]
+      </rosparam>
+      <rosparam param="fixed_estimates" subst_value="True"> 
                 [$(arg landmark_1_x), $(arg landmark_1_y), $(arg landmark_1_yaw), 0, 0, 0,
                  $(arg landmark_2_x), $(arg landmark_2_y), $(arg landmark_2_yaw), 0, 0, 0,
                  $(arg landmark_3_x), $(arg landmark_3_y), $(arg landmark_3_yaw), 0, 0, 0,
-                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0,
-                 $(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
-                 $(arg second_tb3_x), $(arg second_tb3_y), $(arg second_tb3_yaw), 0, 0, 0,
-                 $(arg third_tb3_x),  $(arg third_tb3_y),  $(arg third_tb3_yaw),  0, 0, 0]
+                 $(arg landmark_4_x), $(arg landmark_4_y), $(arg landmark_4_yaw), 0, 0, 0]
       </rosparam>
     </node>
     <node pkg="dse_simulation" type="visualize_estimates_odometry.py" name="dse_gazebo_visualization_node" output="screen">

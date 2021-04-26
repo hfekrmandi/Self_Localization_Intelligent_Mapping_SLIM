@@ -13,6 +13,17 @@
 		    <direction>1 1 -1</direction>
 		    <cast_shadows>true</cast_shadows>
 		</light>
+		<!-- A global light source -->
+		<light type="directional" name="my_light_2">
+		    <pose>0 0 -10 0 0 0</pose>
+		    <diffuse>.9 .9 .9 1</diffuse>
+		    <specular>.1 .1 .1 1</specular>
+		    <attenuation>
+		        <range>20</range>
+		    </attenuation>
+		    <direction>-1 -1 -1</direction>
+		    <cast_shadows>true</cast_shadows>
+		</light>
 		<physics type='ode'>
 		  <max_step_size>0.001</max_step_size>
 		  <real_time_factor>0.25</real_time_factor>
@@ -27,25 +38,25 @@
         	<!-- aruco landmark 0 -->
 		<include>
 			<uri>model://aruco_marker_0</uri>
-			<pose>0 -0.14 0.25 0 0 1.57079632679</pose>
+			<pose>0 -0.09 0.25 0 0 1.57079632679</pose>
 		</include>
 
         	<!-- aruco landmark 1 -->
 		<include>
 			<uri>model://aruco_marker_1</uri>
-			<pose>-0.14 0 0.25 0 0 3.14159265359</pose>
+			<pose>-0.09 0 0.25 0 0 3.14159265359</pose>
 		</include>
 
         	<!-- aruco landmark 2 -->
 		<include>
 			<uri>model://aruco_marker_2</uri>
-			<pose>0 0.14 0.25 0 0 -1.57079632679</pose>
+			<pose>0 0.09 0.25 0 0 -1.57079632679</pose>
 		</include>
 
         	<!-- aruco landmark 3 -->
 		<include>
 			<uri>model://aruco_marker_3</uri>
-			<pose>0.14 0 0.25 0 0 0</pose>
+			<pose>0.09 0 0.25 0 0 0</pose>
 		</include>
 	</world>
 </sdf>
