@@ -56,6 +56,8 @@ class aruco_pose:
         self.max_height = 4
         self.min_height = 0.1
         self.max_yaw_pitch = 0.9
+        self.thetas = np.arange(-1.5708, 1.5708, 0.01)
+        self.theta_index = 0
 
         self.target_image_count = 500
 
@@ -134,16 +136,17 @@ class aruco_pose:
             except tf2_ros.LookupException as e:
                 print(e)
             else:
-                x = tvecs[0][0][2]/1.184 + 0.110
-                y = -tvecs[0][0][0]/1.032 + 0.243
-                z = -tvecs[0][0][1]/1.151 - 0.297
-                dist = np.sqrt(x**2 + y**2 + z**2)
-
-                x = x - 0.008*dist + 0.031
-                y = y + 0.049*dist - 0.222
-                z = z - 0.062*dist + 0.281
-
-                est_xyz = np.array([x, y, z])
+                # x = tvecs[0][0][2]/1.184 + 0.110
+                # y = -tvecs[0][0][0]/1.032 + 0.243
+                # z = -tvecs[0][0][1]/1.151 - 0.297
+                # dist = np.sqrt(x**2 + y**2 + z**2)
+                #
+                # x = x - 0.008*dist + 0.031
+                # y = y + 0.049*dist - 0.222
+                # z = z - 0.062*dist + 0.281
+                #
+                # est_xyz = np.array([x, y, z])
+                est_xyz = np.array([tvecs[0][0][2], -tvecs[0][0][0], -tvecs[0][0][1]])
                 rvecs_reordered = [rvecs[0][0][2], rvecs[0][0][0], rvecs[0][0][1]]
                 r = R.from_rotvec(rvecs_reordered)
                 est_ypr = r.as_euler('zyx')
@@ -174,12 +177,19 @@ class aruco_pose:
         # Move the tag to a new position/orientation
         new_state = ModelState()
         new_state.model_name = 'aruco_marker_0'
-        dist = np.random.uniform(self.min_dist, self.max_dist)
-        theta = np.random.uniform(self.min_theta, self.max_theta)
-        height = np.random.uniform(self.min_height, self.max_height)
-        roll = np.random.uniform(-np.pi, np.pi)
-        yaw = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
-        pitch = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
+        # dist = np.random.uniform(self.min_dist, self.max_dist)
+        # theta = np.random.uniform(self.min_theta, self.max_theta)
+        # height = np.random.uniform(self.min_height, self.max_height)
+        # roll = np.random.uniform(-np.pi, np.pi)
+        # yaw = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
+        # pitch = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
+        dist = 3
+        theta = self.thetas[self.theta_index]
+        height = 0.2
+        roll = 0
+        yaw = self.thetas[self.theta_index]
+        pitch = 0
+        self.theta_index += 1
         new_state.pose.position.x = dist * np.cos(theta)
         new_state.pose.position.y = dist * np.sin(theta)
         new_state.pose.position.z = height
