@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
 """
 ROS Node for outputting Pose topics so that they can be displayed with rqt_plot
