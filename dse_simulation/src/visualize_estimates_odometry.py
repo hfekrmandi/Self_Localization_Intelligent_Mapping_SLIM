@@ -68,12 +68,12 @@ class information_filter:
     def measurement_callback(self, data):
         poses = PoseArray()
         for pose_stamped in data.pose_array:
-            poses.poses += [pose_stamped.pose]
+            poses.poses += [pose_stamped.pose.pose]
         poses.header.stamp = rospy.Time.now()
         if self.ros_prefix == '':
-            poses.header.frame_id = 'base_link'
+            poses.header.frame_id = 'odom'
         else:
-            poses.header.frame_id = self.tf_pretix + '/base_link'
+            poses.header.frame_id = self.tf_pretix + '/odom'
         self.meas_vis_pub.publish(poses)
 
     # Create pose_array for the information results

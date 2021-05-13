@@ -68,34 +68,36 @@ def aruco_R_from_range_3D(range):
 
 
 # Covariance based n distance as estimated for the aruco system (Needs more testing)
-def gazebo_R_from_range(range):
-    # Assuming linear error with a slope of:
+def R_from_range(range, mult=None, add=None):
+    # Distance multiplicative noise:
     # [x y z phi theta psi]
-    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
-    x = np.transpose([0.05, 0.05, 0.05, 0.05, 0.05, 0.05]) # Radians
-    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
+    if mult is None:
+        mult = [0.05, 0.05, 0.05, 0.05, 0.05, 0.05]  # per meter: 5cm xyz, 3 degrees ypr
+
+    # Additive noise
+    if add is None:
+        add = [0, 0, 0, 0, 0, 0]  # per meter: 0m xyz, 0 degrees ypr
 
     range = (range + 0.001) * np.eye(6)
-    r_std = np.multiply(range, x)
+    r_std = np.multiply(range, mult) + add
     r_var = np.multiply(r_std, r_std)
     # Compute variance from standard deviation
     return r_var
 
 
 # Covariance based n distance as estimated for the aruco system (Needs more testing)
-def gazebo_R_from_range_3D(range):
-    # Assuming linear error with a slope of:
+def R_from_range_3D(range, mult=None, add=None):
+    # Distance multiplicative noise:
     # [x y z phi theta psi]
-    # x = [0.0515; 0.0515; 0.018; 0.1324; 0.1324; 0.1324]; # Degrees
-    ### [x, y, theta] [m, m, radians]
-    # [0.2, 0.2, 0.2]
-    # was 20*
-    x = np.transpose([0.05, 0.05, 0.05]) # Radians
-    # x = [0.0075; 0.0075; 0.0075; 0.0075; 0.0075; 0.0075]; # 5% of distance
+    if mult is None:
+        mult = [0.05, 0.05, 0.05]  # per meter: 5cm xy, 3 degrees yaw
 
-    # Slope values are for 3-sigma error, so dividing by 3
+    # Additive noise
+    if add is None:
+        add = [0, 0, 0]  # per meter: 0m xy, 0 degrees yaw
+
     range = (range + 0.001) * np.eye(3)
-    r_std = np.multiply(range, x)
+    r_std = np.multiply(range, mult) + add
     r_var = np.multiply(r_std, r_std)
     # Compute variance from standard deviation
     return r_var
@@ -551,6 +553,41 @@ def fill_FQ(id_list, dt, x_11, dim_state, dim_obs):
     return F_0, Q_0
 
 
+# Fill in the matrices F and Q:
+# F - Motion Jacobian
+# Q - Motion Covariance
+def fill_FQ_no_control(id_list, this_agent_id, dt, x_11, dim_state, dim_obs):
+    n_stored = len(id_list)
+    F_0 = np.zeros((n_stored * dim_state, n_stored * dim_state))
+    Q_0 = np.zeros((n_stored * dim_state, n_stored * dim_state))
+
+    # Fill in Q and F (Different for waypoint vs. robot)
+    for i in range(len(id_list)):
+        i_low = dim_state * i
+        i_high = i_low + dim_state
+
+        # # If we are looking at ID <5, it is a waypoint and as such doesn't move (F is identity matrix)
+        # if id_list[i] < 5:
+        #     #Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001/dt)
+        #     Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state)
+        #     F_0[i_low:i_high, i_low:i_high] = f_eye(dim_state)
+        # else:
+        #     # Else use the unicycle model
+        if dim_obs == 3:
+
+            # Q is a function of distance traveled in the last time step
+            # Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
+            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
+            F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
+        else:
+            # Q is a function of distance traveled in the last time step
+            # Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
+            Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, 0.000001)
+            F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
+
+    return F_0, Q_0
+
+
 # Fill in the matrices R and H, as well as the vector z
 # R - Measurement Covariance
 # H - Measurement Jacobian
@@ -575,25 +612,23 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
 
         # Compute the euler angles from the quaternion passed in
         quat = np.zeros(4)
-        quat[0] = observed_poses[i].pose.orientation.x
-        quat[1] = observed_poses[i].pose.orientation.y
-        quat[2] = observed_poses[i].pose.orientation.z
-        quat[3] = observed_poses[i].pose.orientation.w
+        quat[0] = observed_poses[i].pose.pose.orientation.x
+        quat[1] = observed_poses[i].pose.pose.orientation.y
+        quat[2] = observed_poses[i].pose.pose.orientation.z
+        quat[3] = observed_poses[i].pose.pose.orientation.w
         r = R.from_quat(quat)
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
         z_eul = r.as_euler(euler_order)
 
         # Different functions for 3D vs. 6D observation
         if dim_obs == 3:
-            z_pos = np.array([observed_poses[i].pose.position.x, observed_poses[i].pose.position.y])
+            z_pos = np.array([observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y])
             z_eul = [z_eul[0]]
-            dist = np.linalg.norm(z_pos)
-            R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range_3D(dist)
+            R_0[i_low:i_high, i_low:i_high] = covariance_matrix_to_2D_meas_cov(ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance))
             H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
         else:
-            z_pos = np.array(observed_poses[i].pose.position.x, observed_poses[i].pose.position.y, observed_poses[i].pose.position.z)
-            dist = np.linalg.norm(z_pos)
-            R_0[i_low:i_high, i_low:i_high] = 1 * aruco_R_from_range(dist)
+            z_pos = np.array(observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y, observed_poses[i].pose.pose.position.z)
+            R_0[i_low:i_high, i_low:i_high] = ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance)
             H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
 
         z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
@@ -605,7 +640,7 @@ def fill_RHz(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, di
 # R - Measurement Covariance
 # H - Measurement Jacobian
 # z - The measurement itself
-def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, fixed_ids, fixed_est):
+def fill_RHz_fixed(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, fixed_ids, fixed_est):
     # Define the sizes of each variable
     n_stored = len(id_list)
     n_obs = len(observed_ids)
@@ -620,69 +655,75 @@ def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_or
     # Fill in H and Z
     for i in range(len(observed_ids)):
         id = observed_ids[i]
+        i_low = dim_obs * i
+        i_high = i_low + dim_obs
+
+        # fixed_low = dim_obs * index
+        # fixed_high = fixed_low + dim_obs
+
+        # Compute the euler angles from the quaternion passed in
+        quat = np.zeros(4)
+        quat[0] = observed_poses[i].pose.pose.orientation.x
+        quat[1] = observed_poses[i].pose.pose.orientation.y
+        quat[2] = observed_poses[i].pose.pose.orientation.z
+        quat[3] = observed_poses[i].pose.pose.orientation.w
+        r = R.from_quat(quat)
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
+        z_eul = r.as_euler(euler_order)
+
         if id in fixed_ids:
+            obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
+
+            # Different functions for 3D vs. 6D observation
+            if dim_obs == 3:
+                z_pos = np.array([observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y])
+                z_eul = [z_eul[0]]
+                R_0[i_low:i_high, i_low:i_high] = covariance_matrix_to_2D_meas_cov(
+                    ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance))
+                H_0 = h_camera_zero_3D(H_0, x_11, i, obs_index, dim_state, dim_obs)
+
+                # z_meas = state_from_pose_3D(observed_poses[i].pose.pose)
+                # # Compute the estimated position of this agent relative to the global zero.
+                # #print('tag ', id, ' in frame agent 0 = ', z_meas)
+                # agent2_in_frame_agent1 = agent2_to_frame_agent1_3D(z_meas, zero_3D)
+                # #print('inverted measurement ', agent2_in_frame_agent1)
+                # fixed_state = fixed_est[fixed_low:fixed_high, None]
+                # #print('tag 0 in global', fixed_state)
+                # z = agent2_from_frame_agent1_3D(fixed_state, agent2_in_frame_agent1)
+                # #print('agent 0 in frame tag ', id, ' = ', z)
+                # dist = np.linalg.norm(z[0:2, 0])
+                # R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
+                # H_0 = h_camera_zero_3D(H_0, x_11, i, obs_index, dim_state, dim_obs)
+            else:
+                z_pos = np.array(observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y, observed_poses[i].pose.pose.position.z)
+                R_0[i_low:i_high, i_low:i_high] = ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance)
+                H_0 = h_camera_zero(H_0, x_11, i, obs_index, dim_state, dim_obs)
+
+                # z_meas = state_from_pose(observed_poses[i].pose)
+                # # Compute the estimated position of this agent relative to the global zero.
+                # agent2_in_frame_agent1 = agent2_to_frame_agent1(z_meas, zero_6D)
+                # z = agent2_from_frame_agent1(fixed_est[index, None], agent2_in_frame_agent1)
+                # dist = np.linalg.norm(z[0:3, 0])
+                # R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
+                # H_0 = h_camera_zero(H_0, x_11, i, obs_index, dim_state, dim_obs)
+
+            z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+
+        else:
             index = np.where(fixed_ids == id)[0][0]  # Index of observed agent
             obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
 
-            i_low = dim_obs * i
-            i_high = i_low + dim_obs
-
-            fixed_low = dim_obs * index
-            fixed_high = fixed_low + dim_obs
-
             # Different functions for 3D vs. 6D observation
             if dim_obs == 3:
-                z_meas = state_from_pose_3D(observed_poses[i].pose)
-                # Compute the estimated position of this agent relative to the global zero.
-                #print('tag ', id, ' in frame agent 0 = ', z_meas)
-                agent2_in_frame_agent1 = agent2_to_frame_agent1_3D(z_meas, zero_3D)
-                #print('inverted measurement ', agent2_in_frame_agent1)
-                fixed_state = fixed_est[fixed_low:fixed_high, None]
-                #print('tag 0 in global', fixed_state)
-                z = agent2_from_frame_agent1_3D(fixed_state, agent2_in_frame_agent1)
-                #print('agent 0 in frame tag ', id, ' = ', z)
-                dist = np.linalg.norm(z[0:2, 0])
-                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
-                H_0 = h_camera_zero_3D(H_0, x_11, i, obs_index, dim_state, dim_obs)
-            else:
-                z_meas = state_from_pose(observed_poses[i].pose)
-                # Compute the estimated position of this agent relative to the global zero.
-                agent2_in_frame_agent1 = agent2_to_frame_agent1(z_meas, zero_6D)
-                z = agent2_from_frame_agent1(fixed_est[index, None], agent2_in_frame_agent1)
-                dist = np.linalg.norm(z[0:3, 0])
-                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
-                H_0 = h_camera_zero(H_0, x_11, i, obs_index, dim_state, dim_obs)
-
-            z_0[i_low:i_high] = z
-
-        else:
-            index = np.where(id_list == id)[0][0]  # Index of observed agent
-            obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
-
-            i_low = dim_obs * i
-            i_high = i_low + dim_obs
-
-            # Compute the euler angles from the quaternion passed in
-            quat = np.zeros(4)
-            quat[0] = observed_poses[i].pose.orientation.x
-            quat[1] = observed_poses[i].pose.orientation.y
-            quat[2] = observed_poses[i].pose.orientation.z
-            quat[3] = observed_poses[i].pose.orientation.w
-            r = R.from_quat(quat)
-            # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
-            z_eul = r.as_euler(euler_order)
-
-            # Different functions for 3D vs. 6D observation
-            if dim_obs == 3:
-                z_pos = np.array([observed_poses[i].pose.position.x, observed_poses[i].pose.position.y])
+                z_pos = np.array([observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y])
                 z_eul = [z_eul[0]]
-                dist = np.linalg.norm(z_pos)
-                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range_3D(dist)
+                R_0[i_low:i_high, i_low:i_high] = covariance_matrix_to_2D_meas_cov(
+                    ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance))
                 H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
             else:
-                z_pos = np.array(observed_poses[i].pose.position.x, observed_poses[i].pose.position.y, observed_poses[i].pose.position.z)
-                dist = np.linalg.norm(z_pos)
-                R_0[i_low:i_high, i_low:i_high] = 1 * gazebo_R_from_range(dist)
+                z_pos = np.array(observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y,
+                                 observed_poses[i].pose.pose.position.z)
+                R_0[i_low:i_high, i_low:i_high] = ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance)
                 H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
 
             z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
@@ -694,7 +735,7 @@ def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_or
 # R - Measurement Covariance
 # H - Measurement Jacobian
 # z - The measurement itself
-def fill_RHz_fixed(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, R_var=0.001):
+def fill_RHz_gazebo(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, dim_obs, R_var=0.001):
     # Define the sizes of each variable
     n_stored = len(id_list)
     n_obs = len(observed_ids)
@@ -767,6 +808,33 @@ def fill_Bu(id_list, my_id, ctrl, dim_state, dim_obs):
     return B, u
 
 
+# Fill in the matrix B and the vector u
+# B - Control matrix
+# u - Control signals
+# This function is not ready and has not been tested
+def fill_Bu_ours(id_list, my_id, ctrl, dim_state, dim_obs):
+
+    # Define the sizes of each variable
+    n_stored = len(id_list)
+    B = np.zeros((n_stored * dim_state, n_stored * dim_state))
+    u = np.zeros((n_stored * dim_state, 1))
+
+    index = np.where(id_list == my_id)[0][0]
+
+    i_low = dim_state * index
+    i_high = i_low + dim_obs
+
+    B[i_low:i_high, i_low:i_high] = B_eye(dim_obs)
+    if dim_obs == 3:
+        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.angular.z])
+        u[i_low+3:i_high+3] = ctrl_vect[:, None]
+    else:
+        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.linear.z, ctrl.angular.x, ctrl.angular.y, ctrl.angular.z])
+        u[i_low+6:i_high+6] = ctrl_vect[:, None]
+
+    return B, u
+
+
 # Define the measurement jacobian for a camera (3D-observation)
 def h_camera_3D(H, x, meas_index, agent1, agent2, dim_state, dim_obs):
     agent1_row_min = dim_state * agent1
@@ -809,11 +877,7 @@ def h_camera_zero_3D(H, x, meas_index, agent, dim_state, dim_obs):
     meas_row_min = dim_obs * meas_index
     meas_row_max = meas_row_min + dim_obs
 
-    x = x[agent_row_min:agent_row_max]
-    zero = np.zeros((3, 1))
-
-    Jacobian = np.array(dual_relative_obs_jacobian_3D(zero, x))
-    H[meas_row_min:meas_row_max, agent_row_min:agent_row_max] = Jacobian[:, 0:dim_obs]
+    H[meas_row_min:meas_row_max, agent_row_min:agent_row_max] = np.eye(dim_obs)
     return H
 
 
@@ -824,11 +888,7 @@ def h_camera_zero(H, x, meas_index, agent, dim_state, dim_obs):
     meas_row_min = dim_obs * meas_index
     meas_row_max = meas_row_min + dim_obs
 
-    x = x[agent_row_min:agent_row_max]
-    zero = np.zeros((6, 1))
-
-    Jacobian = np.array(dual_relative_obs_jacobian(zero, x))
-    H[meas_row_min:meas_row_max, agent_row_min:agent_row_max] = Jacobian[:, 0:dim_obs]
+    H[meas_row_min:meas_row_max, agent_row_min:agent_row_max] = np.eye(dim_obs)
     return H
 
 
@@ -1082,6 +1142,8 @@ def state_to_xyzypr(state):
     return output
 
 
+# Takes in a 6x6 x/y/yaw/dx/dy/dyaw covariance matrix, and returns a 6x6 x/y/z/yaw/pitch/roll covariance matrix
+# Assumes that the unknown terms are zero
 def state_cov_to_covariance_matrix(cov):
     if np.shape(cov)[0] == 6:
         output_3D = np.zeros((6, 6))
@@ -1092,6 +1154,17 @@ def state_cov_to_covariance_matrix(cov):
     else:
         output_3D = cov[0:6, 0:6]
     return output_3D
+
+
+# Takes in a 6x6 x/y/z/yaw/pitch/roll covariance matrix, and returns a 3x3 x/y/yaw covariance matrix
+# Throws out all non-relevant terms
+def covariance_matrix_to_2D_meas_cov(cov):
+    output_2D = np.zeros((3, 3))
+    output_2D[0:2, 0:2] = cov[0:2, 0:2]
+    output_2D[0:2, 2] = cov[0:2, 5]
+    output_2D[2, 0:2] = cov[5, 0:2]
+    output_2D[2, 2] = cov[5, 5]
+    return output_2D
 
 
 def rotate_covariance_xyzypr_state(cov, state):
@@ -1110,3 +1183,9 @@ def covariance_to_ros_covariance(cov):
     for i in range(6):
         ros_cov[6*i : 6*(i+1)] = cov[i, :]
     return ros_cov
+
+def ros_covariance_to_6x6_covariance(ros_cov):
+    cov = np.zeros((6, 6), dtype=np.float64)
+    for i in range(6):
+        cov[i, :] = ros_cov[6*i : 6*(i+1)]
+    return cov
