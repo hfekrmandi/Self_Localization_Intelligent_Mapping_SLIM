@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 from __future__ import print_function
 import os
 import roslib
@@ -17,6 +17,7 @@ from geometry_msgs.msg import Pose
 from dse_msgs.msg import PoseMarkers
 from cv_bridge import CvBridge, CvBridgeError
 from scipy.spatial.transform import Rotation as R
+import dse_lib
 
 roslib.load_manifest('dse_simulation')
 
@@ -113,20 +114,6 @@ class aruco_pose:
                 frame = aruco.drawAxis(frame, self.cameraMatrix, self.distCoeffs, rvecs[i], tvecs[i],
                                        self.markerLength / 2)
 
-            for rot in rvecs:
-                rvec_rodr = np.eye(3)
-                rvec_rodr = cv2.Rodrigues(rot, rvec_rodr)
-                # print(rvec_rodr[0])
-                angles = np.zeros([0, 2])
-                theta = -np.arcsin(rvec_rodr[0][2][0])
-                psi = np.arctan2(rvec_rodr[0][2][1] / np.cos(theta), rvec_rodr[0][2][2] / np.cos(theta))
-                phi = np.arctan2(rvec_rodr[0][1][0] / np.cos(theta), rvec_rodr[0][0][0] / np.cos(theta))
-                psi *= 180 / np.pi
-                theta *= 180 / np.pi
-                phi *= 180 / np.pi
-                ## [psi, theta, phi] rotate about
-                ## [  y,     x,   z] respectively
-
             marker_pose = PoseMarkers()
             marker_pose.ids = list(ids.flatten())
             pose_array = []
@@ -134,10 +121,30 @@ class aruco_pose:
                 pose = PoseStamped()
                 pose.header.stamp = rospy.Time.now()
                 pose.header.frame_id = self.ros_prefix[1:] + '/camera_rgb_frame'
-                rvecs_reordered = [rvecs[i][0][2], rvecs[i][0][0], rvecs[i][0][1]]
-                r = R.from_rotvec(rvecs_reordered)
-                quat = r.as_quat()
 
+                # Apply linear bias to the translation estimates
+                # x = tvecs[0][0][2]/1.184 + 0.110
+                # y = -tvecs[0][0][0]/1.032 + 0.243
+                # z = -tvecs[0][0][1]/1.151 - 0.297
+                # dist = np.sqrt(x**2 + y**2 + z**2)
+                # x = x - 0.008*dist + 0.031
+                # y = y + 0.049*dist - 0.222
+                # z = z - 0.062*dist + 0.281
+                pose.pose.position.x = tvecs[0][0][2]
+                pose.pose.position.y = -tvecs[0][0][0]
+                pose.pose.position.z = -tvecs[0][0][1]
+
+                # Swap the angles around to correctly represent our coordinate system
+                # Aruco puts zero at the tag, with z facing out...
+                # We want x forward, y left, z up, euler order zyx = ypr
+                rvecs_reordered = [rvecs[0][0][2], rvecs[0][0][0], rvecs[0][0][1]]
+                r = R.from_rotvec(rvecs_reordered)
+                est_ypr = r.as_euler('zyx')
+                quat = dse_lib.eul2quat(est_ypr[:, None])
+                # r = R.from_euler('zyx', est_ypr + [np.pi, 0, np.pi])
+                # quat = r.as_quat
+                # print(quat[:])
+                # print(pose.pose.orientation)
                 pose.pose.orientation.x = quat[0]
                 pose.pose.orientation.y = quat[1]
                 pose.pose.orientation.z = quat[2]

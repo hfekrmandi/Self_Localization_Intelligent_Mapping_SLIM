@@ -1,43 +1,40 @@
 # Autonomous-GNC-MAS
 
-If you do not have ROS installed, follow the tutorial here for Ubuntu 20.04: http://wiki.ros.org/noetic/Installation/Ubuntu (Note- install ros-noetic-desktop-full, as this code currently requires the gazebo simulator to function). Follow all steps on that page and then continue with this document. 
-If you are planning to use a different ROS version than noetic, you will have to do some work to get python3 working with ROS. It was originally runnning in ROS Melodic, so there's a decent chance. 
+If you do not have ROS installed, follow the tutorial here for Ubuntu 18.04: http://wiki.ros.org/melodic/Installation/Ubuntu (Note- install ros-melodic-desktop-full, as this code currently requires the gazebo simulator to function). Follow all steps on that page and then continue with this document. 
+This code will not work with noetic or any future versions as of 5/11/2021, since ROS is deprecating TF prefixes, which means that multi-agent simulations are all but dead. 
 
 Installing this code - 
-Create a new ROS workspace for this code:
+Create a new ROS workspace for this code: \
+... \
+mkdir ~/simulation_ws \
+cd ~/simulation_ws \
+mkdir src \
+catkin_make \
 ...
-mkdir ~/simulation_ws
-cd ~/simulation_ws
-mkdir src
+
+Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages: \
+... \
+cd ~/simulation_ws/src \
+git clone -b dev_inf_filter https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM \
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3 \
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_msgs \
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations \
+cd .. \
 catkin_make
+
+sudo apt update \
+sudo apt install python pip-python \
+pip install scipy numpy opencv-python opencv-contrib-python \
 ...
 
-Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages:
-...
-cd ~/simulation_ws/src
-git clone -b dev_inf_filter https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM
-git clone -b noetic-devel https://github.com/ROBOTIS-GIT/turtlebot3
-git clone -b noetic-devel https://github.com/ROBOTIS-GIT/turtlebot3_msgs
-git clone -b noetic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations
-git clone -b melodic-devel https://github.com/ros/robot_state_publisher
-cd ..
-catkin_make
-
-sudo apt update
-sudo apt install python3 pip-python3
-pip3 install scipy numpy opencv-python opencv-contrib-python
-...
-
-The robot_state_publisher in noetic doesn't have a tf_prefix option, which is a death sentence for multiple identical agents. To fix this, I have included pulling the melodic version which doesn't have this issue. At this time there is an open PR so maybe it will be fixed later? https://github.com/ros/robot_state_publisher/pull/139
-
-Replace (USER) with your username (you can see it with echo $USER).
-...
-echo "source /home/(USER)/simulation_ws/devel/setup.bash" >> ~/.bashrc
-source ~/.bashrc
+Replace (USER) with your username (you can see it with echo $USER). \
+... \
+echo "source ~/simulation_ws/devel/setup.bash" >> ~/.bashrc \ 
+source ~/.bashrc \
 ...
 
 Your directories should look like:
-~/simulation_ws
+- ~/simulation_ws
 	- build
 	- devel
 		- setup.bash
@@ -56,30 +53,30 @@ Your directories should look like:
 		- turtlebot3_simulations
 
 I also highly recommend installing terminator. It allows you to easily run multiple terminals simultaneously.
-With it open, you can use Ctrl-Shift-E to split a terminal horizontally, and Ctrl-Shift-O to split vertically.
-...
-sudo apt update
-sudo apt install terminator
+With it open, you can use Ctrl-Shift-E to split a terminal horizontally, and Ctrl-Shift-O to split vertically. \
+... \
+sudo apt update \
+sudo apt install terminator \
 ...
 
-And for writing code, I recommend pycharm community. It can be installed through the ubuntu software center. Then, launch it from a terminal
-...
-pycharm-community
-...
-and open a project -> select the Self_Localization_Intelligent_Mapping_SLIM folder. Set up the interpreter to be your system's python3 executable, File -> Settings -> Project -> Python Interpereter -> (click on the gear on the right) -> Add... -> Existing Environment -> Add /usr/bin/python3. This will ensure that pycharm has your installed python libraries and all of the ROS libraries. 
+And for writing code, I recommend pycharm community. It can be installed through the ubuntu software center. Then, launch it from a terminal \
+... \
+pycharm-community \
+... \
+and open a project -> select the Self_Localization_Intelligent_Mapping_SLIM folder. Set up the interpreter to be your system's python3 executable, File -> Settings -> Project -> Python Interpereter -> (click on the gear on the right) -> Add... -> Existing Environment -> Add /usr/bin/python3. This will ensure that pycharm has your installed python libraries and all of the ROS libraries.  \
 
-To test this code: 
-...
-roslaunch dse_simulation demo_1_agent.launch
-...
-This will start a gazebo simulation with a single agent and 3 tags lined up in front of it. Each of the 3 tags is seen and estimated by the agent. The estimates are visualized as a sample of 50 vectors from the mean and covariance of the estimate (Will be improved later to a covariance ellipse).
+To test this code:  \
+... \
+roslaunch dse_simulation demo_1_agent.launch \
+... \
+This will start a gazebo simulation with a single agent and 3 tags lined up in front of it. Each of the 3 tags is seen and estimated by the agent. The estimates are visualized as a sample of 50 vectors from the mean and covariance of the estimate (Will be improved later to a covariance ellipse). \
 
-...
-roslaunch dse_simulation 3_agents_moving_awayLine.launch
-...
-This will start a gazebo simulation with 3 agents facing 2 pairs of 2 tags. To start the agents moving, send a message to the controller of each agent. The consensus runs and combines the estimates of all agents. Rviz is set to display all objects as estimated by agent 0 (tb3_0). 
-...
-rostopic pub /control_on std_msgs/Bool "data: true" --once
+... \
+roslaunch dse_simulation 3_agents_moving_awayLine.launch \
+... \
+This will start a gazebo simulation with 3 agents facing 2 pairs of 2 tags. To start the agents moving, send a message to the controller of each agent. The consensus runs and combines the estimates of all agents. Rviz is set to display all objects as estimated by agent 0 (tb3_0).  \
+... \
+rostopic pub /control_on std_msgs/Bool "data: true" --once \
 ...
 
 Visualizing in RVIZ

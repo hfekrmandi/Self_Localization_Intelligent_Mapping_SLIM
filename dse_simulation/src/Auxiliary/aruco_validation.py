@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 from __future__ import print_function
 import os
 import roslib
@@ -30,34 +30,40 @@ class aruco_pose:
     def __init__(self):
 
         # # Get parameters from launch file
-        # self.ros_prefix = 'tb3_0'
+        # self.ros_prefix = rospy.get_param('~prefix', '')
         # if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
         #     self.ros_prefix = '/' + self.ros_prefix
         # # side length of tag in meters
-        # self.markerLength = 0.1
-        # self.cal_file = 'calibrationSave_gazebo.p'
+        # self.markerLength = rospy.get_param('~marker_length', 0.1)
+        # self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
+        # self.data_skip = rospy.get_param('~data_skip', 0)
+        # self.data_skip_count = 0
 
         # Get parameters from launch file
-        self.ros_prefix = rospy.get_param('~prefix', '')
-        if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
-            self.ros_prefix = '/' + self.ros_prefix
+        self.ros_prefix = ''
         # side length of tag in meters
-        self.markerLength = rospy.get_param('~marker_length', 0.1)
-        self.cal_file = rospy.get_param('~calibration_file', 'calibrationSave_2.p')
-        self.data_skip = rospy.get_param('~data_skip', 0)
+        self.markerLength = 0.1
+        self.cal_file = '../calibrationSave_gazebo.p'
+        self.data_skip = 4
         self.data_skip_count = 0
 
         # x is forward, y is left, z is up
         # camera estimated max/mins
         self.max_dist = 8
         self.min_dist = 0.3
-        self.max_theta = 0.9
-        self.min_theta = -0.9
-        self.max_height = 4
-        self.min_height = 0.1
-        self.max_yaw_pitch = 0.9
+        self.max_theta = -0.9
+        self.min_theta = 0.9
+        self.max_height = 0.5
+        self.min_height = 0.5
+        self.max_yaw_pitch = 0
+        self.thetas = np.arange(-1.5708, 1.5708, 0.01)
+        self.theta_index = 0
 
         self.target_image_count = 500
+        self.true_poses = []
+        self.est_poses = []
+        self.error_poses = []
+        self.metrics = []
 
         # import saved calibration information
         # calibrationSave.p should be correct for laptop webcam
@@ -69,33 +75,33 @@ class aruco_pose:
 
         self.decimator = 0
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber(self.ros_prefix + "/camera/rgb/image_raw", Image, self.callback)
-        self.pose_pub = rospy.Publisher(self.ros_prefix + "/dse/pose_markers", PoseMarkers, queue_size=1)
+        self.image_sub = rospy.Subscriber("camera/rgb/image_raw", Image, self.callback)
+        self.pose_pub = rospy.Publisher("dse/pose_markers", PoseMarkers, queue_size=1)
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.br = tf2_ros.TransformBroadcaster()
         self.gazebo_modelstate_pub = rospy.Publisher("/gazebo/set_model_state", ModelState, queue_size=1)
 
-        path = sys.path[0].split('/')
-        output_file = os.path.join('/'.join(path[:path.index('dse_simulation')+1]), 'Debugging data/extrinsic_calibration data.csv')
-        print(output_file)
-        self.all_data_file = open(output_file, mode='w')
-        self.all_csv_writer = csv.writer(self.all_data_file, delimiter=',')
-        csv_header = []
-        for i in ['true', 'est', 'error']:
-            for j in ['x', 'y', 'z', 'rz', 'ry', 'rx']:
-                csv_header.append(str(j + ' ' + i))
-        self.all_csv_writer.writerow(csv_header)
-        self.all_csv_writer.writerow(csv_header)
+        # path = sys.path[0].split('/')
+        # output_file = os.path.join('/'.join(path[:path.index('dse_simulation')+1]), 'Debugging data/extrinsic_calibration data.csv')
+        # print(output_file)
+        # self.all_data_file = open(output_file, mode='w')
+        # self.all_csv_writer = csv.writer(self.all_data_file, delimiter=',')
+        # csv_header = []
+        # for i in ['true', 'est', 'error']:
+        #     for j in ['x', 'y', 'z', 'rz', 'ry', 'rx']:
+        #         csv_header.append(str(j + ' ' + i))
+        # self.all_csv_writer.writerow(csv_header)
+        # self.all_csv_writer.writerow(csv_header)
 
-    def send_all_poses_csv(self, true_poses, est_poses):
-        true_poses_np = np.array(true_poses)
-        true_poses_flat = true_poses_np.flatten()
-        est_poses_np = np.array(est_poses)
-        est_poses_flat = est_poses_np.flatten()
-
-        all = np.concatenate((true_poses_flat, est_poses_flat))
-        self.all_csv_writer.writerow(all)
+    # def send_all_poses_csv(self, true_poses, est_poses):
+    #     true_poses_np = np.array(true_poses)
+    #     true_poses_flat = true_poses_np.flatten()
+    #     est_poses_np = np.array(est_poses)
+    #     est_poses_flat = est_poses_np.flatten()
+    #
+    #     all = np.concatenate((true_poses_flat, est_poses_flat))
+    #     self.all_csv_writer.writerow(all)
 
     def callback(self, data):
         # Lowering the camera image rate
@@ -127,13 +133,17 @@ class aruco_pose:
                                                                   None, None)
 
         if ids is not None and len(rvecs) == 1:
-            from_tf = 'tb3_0/camera_rgb_frame'
+            from_tf = 'camera_rgb_frame'
             to_tf = 'aruco_marker_0'
             try:
                 transform = self.tfBuffer.lookup_transform(from_tf, to_tf, rospy.Time(0))
             except tf2_ros.LookupException as e:
                 print(e)
+            except tf2_ros.ExtrapolationException as e:
+                print(e)
             else:
+                est_xyz = np.array([tvecs[0][0][2], -tvecs[0][0][0], -tvecs[0][0][1]])
+
                 x = tvecs[0][0][2]/1.184 + 0.110
                 y = -tvecs[0][0][0]/1.032 + 0.243
                 z = -tvecs[0][0][1]/1.151 - 0.297
@@ -142,8 +152,8 @@ class aruco_pose:
                 x = x - 0.008*dist + 0.031
                 y = y + 0.049*dist - 0.222
                 z = z - 0.062*dist + 0.281
-
                 est_xyz = np.array([x, y, z])
+
                 rvecs_reordered = [rvecs[0][0][2], rvecs[0][0][0], rvecs[0][0][1]]
                 r = R.from_rotvec(rvecs_reordered)
                 est_ypr = r.as_euler('zyx')
@@ -166,10 +176,22 @@ class aruco_pose:
                 error_ypr = r.as_euler('zyx')
                 error_xyz = est_xyz - true_xyz
                 error_xyzypr = np.concatenate((error_xyz, error_ypr))
-                self.all_csv_writer.writerow(np.concatenate((true_xyzypr, est_xyzypr, error_xyzypr)))
+                # self.all_csv_writer.writerow(np.concatenate((true_xyzypr, est_xyzypr, error_xyzypr)))
+
+                true_dist = np.linalg.norm(true_xyzypr[0:3])
+                est_dist = np.linalg.norm(est_xyzypr[0:3])
+                # Compute the pixel area as the area of 2 triangles: https://www.cuemath.com/geometry/area-of-a-quadrilateral/
+                tl_area = np.abs(0.5 * np.linalg.det([corners[0][0, 0:3, 0], corners[0][0, 0:3, 1], [1, 1, 1]]))
+                br_area = np.abs(0.5 * np.linalg.det([corners[0][0, [0, 3, 2], 0], corners[0][0, [0, 3, 2], 1], [1, 1, 1]]))
+                pix_area = tl_area + br_area
+                metrics = [true_dist, est_dist, pix_area]
 
                 self.decimator += 1
                 print(self.target_image_count - self.decimator, " images left")
+                self.true_poses.append(true_xyzypr)
+                self.est_poses.append(est_xyzypr)
+                self.error_poses.append(error_xyzypr)
+                self.metrics.append(metrics)
 
         # Move the tag to a new position/orientation
         new_state = ModelState()
@@ -177,9 +199,18 @@ class aruco_pose:
         dist = np.random.uniform(self.min_dist, self.max_dist)
         theta = np.random.uniform(self.min_theta, self.max_theta)
         height = np.random.uniform(self.min_height, self.max_height)
-        roll = np.random.uniform(-np.pi, np.pi)
-        yaw = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
+        # roll = np.random.uniform(-np.pi, np.pi)
+        roll = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
+        # yaw = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
+        yaw = theta
         pitch = np.random.uniform(-self.max_yaw_pitch, self.max_yaw_pitch)
+        # dist = 3
+        # theta = self.thetas[self.theta_index]
+        # height = 0.2
+        # roll = 0
+        # yaw = self.thetas[self.theta_index]
+        # pitch = 0
+        # self.theta_index += 1
         new_state.pose.position.x = dist * np.cos(theta)
         new_state.pose.position.y = dist * np.sin(theta)
         new_state.pose.position.z = height
@@ -197,11 +228,22 @@ class aruco_pose:
         t.transform.rotation = new_state.pose.orientation
         self.br.sendTransform(t)
 
+        cv2.imshow("Image window", frame)
+        cv2.waitKey(3)
+
         # Once we have enough images, generate calibration file and end
-        if self.decimator >= self.target_image_count:
+        if self.decimator >= self.target_image_count or self.theta_index >= len(self.thetas):
             self.image_sub.unregister()
+            header = '[header, [true, measured, error, metrics]]'
+            store_data(header, [self.true_poses, self.est_poses, self.error_poses, self.metrics])
+            print('Data written to file, exiting...')
             return
 
+
+def store_data(header, data):
+    cal = [header, data]
+    dump_file = "aruco_data_" + str(rospy.Time.now()) + ".p"
+    pickle.dump(cal, open(os.path.join(sys.path[0], dump_file), "wb"))
 
 
 def main(args):
