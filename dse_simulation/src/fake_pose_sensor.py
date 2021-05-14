@@ -28,9 +28,9 @@ def noisy_transform(transform):
     true_state = np.concatenate((true_xyz, true_eul))
     true_distance = np.linalg.norm(true_xyz)
 
-    add = [0, 0, 0, 0, 0, 0]
-    mult = [1, 1, 1, 1, 1, 1]
-    noise = np.random.multivariate_normal([0, 0, 0, 0, 0, 0], dse_lib.R_from_range(true_distance, mult, add))
+    # add = [0, 0, 0, 0, 0, 0]
+    # mult = [1, 1, 1, 1, 1, 1]
+    noise = np.random.multivariate_normal([0, 0, 0, 0, 0, 0], dse_lib.R_from_range(true_distance))
     sim_state = true_state + noise
 
     [true_position.x, true_position.y, true_position.z] = sim_state[0:3]
@@ -84,10 +84,10 @@ class fake_pose_sensor:
         # side length of tag in meters
         self.r = rospy.Rate(rospy.get_param('~rate', 10))
         # max measurement distance in meters
-        self.meas_threshold = rospy.get_param('~meas_threshold', 10)
+        self.meas_threshold = rospy.get_param('~meas_threshold', 5)
         self.this_agent_id = rospy.get_param('~id')
         id_to_tf_arr = rospy.get_param('~id_to_tf')
-        fixed_relations_arr = rospy.get_param('~fixed_relations')
+        fixed_relations_arr = rospy.get_param('~fixed_relations', [])
 
         # # Get parameters from launch file
         # self.ros_prefix = 'tb3_0'
@@ -98,7 +98,7 @@ class fake_pose_sensor:
         # # max measurement distance in meters
         # self.meas_threshold = 10.0
         # self.this_agent_id = 5
-        # id_to_tf_arr = [[0, 'aruco_marker_0'], [1, 'aruco_marker_1'], [2, 'aruco_marker_2'], [3, 'aruco_marker_3'], [5, 'tb3_0/base_footprint']]
+        # id_to_tf_arr = [[0, 'aruco_marker_0'], [1, 'aruco_marker_1'], [2, 'aruco_marker_2'], [3, 'aruco_marker_3'], [5, 'tb3_0/base_footprint'], [6, 'tb3_1/base_footprint']]
         # fixed_relations_arr = [[0, 'world', [0, 1, 2, 3]]]
 
         self.id_to_tf = {}
@@ -129,7 +129,7 @@ class fake_pose_sensor:
 
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
-        time.sleep(2)
+        time.sleep(5)
         self.pose_pub = rospy.Publisher(self.ros_prefix + "/dse/pose_markers", PoseMarkers, queue_size=1)
 
     def estimate_and_send(self):
@@ -160,10 +160,11 @@ class fake_pose_sensor:
 
             tag_tf = self.id_to_tf[id]
             robot_tf = self.id_to_tf[self.this_agent_id]
-            robot_in_tag_xfm = self.tfBuffer.lookup_transform(
-                tag_tf, robot_tf, rospy.Time(0))
 
             if id in self.fixed_relations:
+                robot_in_tag_xfm = self.tfBuffer.lookup_transform(
+                    tag_tf, robot_tf, rospy.Time(0))
+
                 world_tf = self.fixed_relations[id][1]
 
                 tag_in_world_xfm = self.tfBuffer.lookup_transform(
@@ -176,8 +177,11 @@ class fake_pose_sensor:
                 pose_stamped = pose_stamped_to_pose_stamped_covariance(robot_in_world_pose, covariance)
                 sim_poses.ids.append(self.fixed_relations[id][0])
             else:
-                robot_in_tag_xfm_noisy, covariance = noisy_transform(robot_in_tag_xfm)
-                pose_stamped = transform_to_pose_stamped_covariance(robot_in_tag_xfm, covariance)
+                tag_in_robot_xfm = self.tfBuffer.lookup_transform(
+                    robot_tf, tag_tf, rospy.Time(0))
+
+                tag_in_robot_xfm_noisy, covariance = noisy_transform(tag_in_robot_xfm)
+                pose_stamped = transform_to_pose_stamped_covariance(tag_in_robot_xfm, covariance)
                 sim_poses.ids.append(id)
 
             sim_poses.pose_array.append(pose_stamped)

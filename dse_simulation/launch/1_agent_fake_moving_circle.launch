@@ -74,8 +74,8 @@
   
   <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">
     <param name="n_params" value="3" />
-    <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg landmark_1_name), $(arg landmark_2_name), $(arg landmark_3_name), $(arg landmark_4_name)]</rosparam>
-    <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id), $(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]</rosparam>
+    <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix)]</rosparam>
+    <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id)]</rosparam>
     <rosparam param="agent_ids" subst_value="True"> [$(arg first_tb3_id)]</rosparam>
     <param name="dim_state" type="int" value="$(arg dim_state)" />
   </node>
@@ -93,8 +93,7 @@
       <param name="meas_threshold" type="double" value="10" />
       <param name="id" type="int" value="$(arg first_tb3_id)" />
       <rosparam param="id_to_tf" subst_value="True"> 
-                [[$(arg landmark_1_id), $(arg landmark_1_name)], [$(arg landmark_2_id), $(arg landmark_2_name)], [$(arg landmark_3_id), $(arg landmark_3_name)], 
-                 [$(arg landmark_4_id), $(arg landmark_4_name)], [$(arg first_tb3_id), $(arg first_tb3_tf)]]
+                [[$(arg landmark_1_id), $(arg landmark_1_name)], [$(arg landmark_2_id), $(arg landmark_2_name)], [$(arg landmark_3_id), $(arg landmark_3_name)], [$(arg landmark_4_id), $(arg landmark_4_name)], [$(arg first_tb3_id), $(arg first_tb3_tf)]]
       </rosparam>
       <rosparam param="fixed_relations" subst_value="True"> 
                 [[$(arg world_id), $(arg world_name), [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]]]
@@ -127,7 +126,7 @@
 
     <node pkg="dse_simulation" type="circle_controller.py" name="circle_controller_node" output="screen">
       <param name="prefix" value="$(arg first_tb3_prefix)" />
-      <param name="fwd_vel" type="double" value="0.1" />
+      <param name="fwd_vel" type="double" value="0.5" />
       <param name="radius" type="double" value="-2" />
     </node>
   </group>

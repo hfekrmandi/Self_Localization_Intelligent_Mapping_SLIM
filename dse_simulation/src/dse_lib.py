@@ -78,6 +78,7 @@ def R_from_range(range, mult=None, add=None):
     if add is None:
         add = [0, 0, 0, 0, 0, 0]  # per meter: 0m xyz, 0 degrees ypr
 
+    # Add 1mm so that even with zero range we don't explode
     range = (range + 0.001) * np.eye(6)
     r_std = np.multiply(range, mult) + add
     r_var = np.multiply(r_std, r_std)
@@ -588,6 +589,45 @@ def fill_FQ_no_control(id_list, this_agent_id, dt, x_11, dim_state, dim_obs):
     return F_0, Q_0
 
 
+# Fill in the matrices F and Q:
+# F - Motion Jacobian
+# Q - Motion Covariance
+def fill_FQ_our_control(id_list, this_agent_id, dt, x_11, dim_state):
+    n_stored = len(id_list)
+    F_0 = np.zeros((n_stored * dim_state, n_stored * dim_state))
+    Q_0 = np.zeros((n_stored * dim_state, n_stored * dim_state))
+
+    # Fill in Q and F (Different for waypoint vs. robot)
+    for i in range(len(id_list)):
+        i_low = dim_state * i
+        i_high = i_low + dim_state
+
+        if id_list[i] == this_agent_id:
+            if dim_state == 6:
+                # Q is a function of distance traveled in the last time step
+                # Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.001*dt)**2)
+                F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
+            else:
+                # Q is a function of distance traveled in the last time step
+                # Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.001*dt)**2)
+                F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
+        else:
+            if dim_state == 6:
+                # Q is a function of distance traveled in the last time step
+                # Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.02*dt)**2)
+                F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
+            else:
+                # Q is a function of distance traveled in the last time step
+                # Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.02*dt)**2)
+                F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
+
+    return F_0, Q_0
+
+
 # Fill in the matrices R and H, as well as the vector z
 # R - Measurement Covariance
 # H - Measurement Jacobian
@@ -710,7 +750,7 @@ def fill_RHz_fixed(id_list, my_id, observed_ids, observed_poses, x_11, euler_ord
             z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
 
         else:
-            index = np.where(fixed_ids == id)[0][0]  # Index of observed agent
+            index = np.where(id_list == id)[0][0]  # Index of observed agent
             obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
 
             # Different functions for 3D vs. 6D observation
@@ -725,6 +765,82 @@ def fill_RHz_fixed(id_list, my_id, observed_ids, observed_poses, x_11, euler_ord
                                  observed_poses[i].pose.pose.position.z)
                 R_0[i_low:i_high, i_low:i_high] = ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance)
                 H_0 = h_camera(H_0, x_11, i, obs_index, index, dim_state, dim_obs)
+
+            z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+
+    return R_0, H_0, z_0
+
+
+# Fill in the matrices R and H, as well as the vector z
+# R - Measurement Covariance
+# H - Measurement Jacobian
+# z - The measurement itself
+def fill_RHz_fixed_our_vel_2D(id_list, my_id, observed_ids, observed_poses, x_11, euler_order, dim_state, fixed_ids,
+                              fixed_est, ctrl):
+    # Define the sizes of each variable
+    n_stored = len(id_list)
+    n_obs = len(observed_ids) + 1
+    R_var = 1
+    R_0 = R_var * np.eye(n_obs * 6)
+    H_0 = np.zeros((n_obs * 6, n_stored * dim_state))
+    z_0 = np.zeros((n_obs * 6, 1))
+
+    zero_3D = np.zeros((3, 1))
+    zero_6D = np.zeros((6, 1))
+
+    # Add in our velocity measurements
+    index = np.where(my_id == id_list)[0][0]
+    i_low = 6 * (n_obs - 1)
+    i_high = i_low + 6
+
+    # The control velocity is in our local frame, but the estimates are in the global frame, so we have to transform it.
+    # This is wrong, but it works. H should be the derivative of this rotation matrix, not just the identity.
+    xy_vel = np.array([ctrl.linear.x, ctrl.linear.y])
+    [local_x_vel, local_y_vel] = xy_vel.dot(theta_2_rotm(x_11[(6*index)+2]))
+    z_vel = np.array([local_x_vel, local_y_vel, ctrl.angular.z])
+    R_0[i_low+3:i_high, i_low+3:i_high] = (0.01)**2 * np.eye(3)
+    H_0[i_low+3:i_high, (6*index)+3:(6*index)+6] = np.eye(3)
+    z_0[i_low+3:i_high] = z_vel[:, None]
+
+    # Fill in H and Z
+    for i in range(len(observed_ids)):
+        id = observed_ids[i]
+        i_low = 6 * i
+        i_high = i_low + 3
+
+        # fixed_low = dim_obs * index
+        # fixed_high = fixed_low + dim_obs
+
+        # Compute the euler angles from the quaternion passed in
+        quat = np.zeros(4)
+        quat[0] = observed_poses[i].pose.pose.orientation.x
+        quat[1] = observed_poses[i].pose.pose.orientation.y
+        quat[2] = observed_poses[i].pose.pose.orientation.z
+        quat[3] = observed_poses[i].pose.pose.orientation.w
+        r = R.from_quat(quat)
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_quat.html
+        z_eul = r.as_euler(euler_order)
+
+        if id in fixed_ids:
+            obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
+
+            z_pos = np.array([observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y])
+            z_eul = [z_eul[0]]
+            R_0[i_low:i_high, i_low:i_high] = covariance_matrix_to_2D_meas_cov(
+                ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance))
+            H_0 = h_camera_zero_3D(H_0, x_11, i, obs_index, dim_state, 6)
+
+            z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
+
+        else:
+            index = np.where(id_list == id)[0][0]  # Index of observed agent
+            obs_index = np.where(id_list == my_id)[0][0]  # Index of observing agent
+
+            z_pos = np.array([observed_poses[i].pose.pose.position.x, observed_poses[i].pose.pose.position.y])
+            z_eul = [z_eul[0]]
+            R_0[i_low:i_high, i_low:i_high] = covariance_matrix_to_2D_meas_cov(
+                ros_covariance_to_6x6_covariance(observed_poses[i].pose.covariance))
+            H_0 = h_camera_3D(H_0, x_11, i, obs_index, index, dim_state, 6)
 
             z_0[i_low:i_high] = np.concatenate((z_pos, z_eul))[:, None]
 
@@ -812,24 +928,23 @@ def fill_Bu(id_list, my_id, ctrl, dim_state, dim_obs):
 # B - Control matrix
 # u - Control signals
 # This function is not ready and has not been tested
-def fill_Bu_ours(id_list, my_id, ctrl, dim_state, dim_obs):
+def fill_Bu_ours(id_list, my_id, dt, ctrl, dim_state):
 
     # Define the sizes of each variable
     n_stored = len(id_list)
-    B = np.zeros((n_stored * dim_state, n_stored * dim_state))
+    B = np.eye(n_stored * dim_state)
     u = np.zeros((n_stored * dim_state, 1))
 
     index = np.where(id_list == my_id)[0][0]
 
     i_low = dim_state * index
-    i_high = i_low + dim_obs
+    i_high = i_low + dim_state // 2
 
-    B[i_low:i_high, i_low:i_high] = B_eye(dim_obs)
-    if dim_obs == 3:
-        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.angular.z])
+    if dim_state == 6:
+        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.angular.z]) * dt
         u[i_low+3:i_high+3] = ctrl_vect[:, None]
     else:
-        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.linear.z, ctrl.angular.x, ctrl.angular.y, ctrl.angular.z])
+        ctrl_vect = np.array([ctrl.linear.x, ctrl.linear.y, ctrl.linear.z, ctrl.angular.x, ctrl.angular.y, ctrl.angular.z]) * dt
         u[i_low+6:i_high+6] = ctrl_vect[:, None]
 
     return B, u
@@ -838,18 +953,18 @@ def fill_Bu_ours(id_list, my_id, ctrl, dim_state, dim_obs):
 # Define the measurement jacobian for a camera (3D-observation)
 def h_camera_3D(H, x, meas_index, agent1, agent2, dim_state, dim_obs):
     agent1_row_min = dim_state * agent1
-    agent1_row_max = agent1_row_min + dim_obs
+    agent1_row_max = agent1_row_min + 3
     agent2_row_min = dim_state * agent2
-    agent2_row_max = agent2_row_min + dim_obs
+    agent2_row_max = agent2_row_min + 3
     meas_row_min = dim_obs * meas_index
-    meas_row_max = meas_row_min + dim_obs
+    meas_row_max = meas_row_min + 3
 
     x1 = x[agent1_row_min:agent1_row_max]
     x2 = x[agent2_row_min:agent2_row_max]
 
     Jacobian = np.array(dual_relative_obs_jacobian_3D(x1, x2))
-    H[meas_row_min:meas_row_max, agent1_row_min:agent1_row_max] = Jacobian[:, 0:dim_obs]
-    H[meas_row_min:meas_row_max, agent2_row_min:agent2_row_max] = Jacobian[:, dim_obs:2*dim_obs]
+    H[meas_row_min:meas_row_max, agent1_row_min:agent1_row_max] = Jacobian[:, 0:3]
+    H[meas_row_min:meas_row_max, agent2_row_min:agent2_row_max] = Jacobian[:, 3:6]
     return H
 
 

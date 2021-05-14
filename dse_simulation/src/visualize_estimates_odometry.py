@@ -83,6 +83,8 @@ class information_filter:
         inf_y = dse_lib.multi_array_2d_output(data.inf_vector)
         self.inf_x = np.linalg.inv(inf_Y).dot(inf_y)
         inf_P = np.linalg.inv(inf_Y)
+        inf_P[inf_P < 0] = 0
+        inf_P = np.sqrt(inf_P)
 
         odom = Odometry()
         odom.header.stamp = rospy.Time.now()

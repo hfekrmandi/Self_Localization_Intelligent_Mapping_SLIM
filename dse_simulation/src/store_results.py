@@ -120,7 +120,7 @@ class information_filter:
         self.time[agent_index].append(time)
         self.true_poses[agent_index].append(np.array(true_pose))
         self.est_poses[agent_index].append(np.array(est_pose))
-        #self.est_covariances[agent_index].append(est_covariance)
+        self.est_covariances[agent_index].append(est_covariance)
 
     def store_data(self, data):
         if data.data:

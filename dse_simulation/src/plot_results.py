@@ -24,6 +24,7 @@ from gazebo_msgs.msg import LinkStates
 import tf_conversions
 import tf2_ros
 import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
 
 import gazebo_lib
 import dse_lib
@@ -33,7 +34,7 @@ roslib.load_manifest('dse_simulation')
 
 def main(args):
 
-    dump_file = "simulation_data_184110000000.p"
+    dump_file = "simulation_data_consensus_separated.p"
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -50,13 +51,6 @@ def main(args):
             object_names[i] = 'agent_' + name[-1:]
             agent_names[agent_names.index(name)] = 'agent_' + name[-1:]
 
-    agents = [4, 5, 6]
-    new_order = agents[:len(agent_ids)] + [0, 1, 2, 3]
-    new_order = np.array(new_order)
-    for i in range(len(agent_ids)):
-        true_poses[i] = true_poses[i][:, new_order, :]
-        est_poses[i] = est_poses[i][:, new_order, :]
-
     num_objects = len(object_ids)
     num_agents = len(agent_ids)
     colors = ['k', 'g', 'r', 'm', 'b', 'c', 'y']
@@ -67,13 +61,14 @@ def main(args):
     start = np.shape(time[agent_index])[0] - num_datapoints 
     end = np.shape(time[agent_index])[0]
 
+    covar_points = np.arange(start, end, 100)
+
     plt.figure()
     #plt.tight_layout()
     #plt.suptitle('agent ' + str(agent_index))
     #plt.subplot(211)
     #plt.tight_layout()
     plt.grid()
-    plt.xlim(-1.5, 2.5)
     plt.plot(0, 0, 'k.-', lw=2, label='true')
     plt.plot(0, 0, 'k--', lw=1, label='estimated')
     for i in range(num_objects):
@@ -87,6 +82,13 @@ def main(args):
         est_data = est_poses[agent_index][start:end, i]
         plt.plot(true_data[:, 0], true_data[:, 1], colors[i % len(colors)] + '.-', lw=2)
         plt.plot(est_data[:, 0], est_data[:, 1], colors[i % len(colors)] + '--', lw=2, label=name)
+
+        ax = plt.gca()
+        for ellipse in covar_points:
+            xy = est_data[ellipse]
+            width = est_covariances[agent_index][ellipse, i, 0, 0]
+            height = est_covariances[agent_index][ellipse, i, 1, 1]
+            ax.add_patch(Ellipse(xy=xy, width=width, height=height, edgecolor=colors[i % len(colors)], fc='None'))
 
     plt.legend()
     plt.xlabel('x (m)')
@@ -111,6 +113,11 @@ def main(args):
         error = true_data - est_data
         error_dist = np.sqrt(error[:, 0] ** 2 + error[:, 1] ** 2)
         plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '--', lw=2, label=name)
+
+        covar_x = est_covariances[agent_index][start:end, i, 0, 0]
+        covar_y = est_covariances[agent_index][start:end, i, 1, 1]
+        covar = np.sqrt(covar_x**2 + covar_y**2)
+        plt.fill_between(np.array(time_data), error_dist - covar, error_dist + covar, color=colors[i % len(colors)], alpha=0.2)
 
     plt.legend()
     plt.xlabel('time (seconds)')
