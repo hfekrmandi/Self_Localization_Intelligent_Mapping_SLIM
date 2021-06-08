@@ -9,6 +9,7 @@ project(dse_simulation)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   dse_msgs
+  nav_msgs
   geometry_msgs
   visualization_msgs
   rostest

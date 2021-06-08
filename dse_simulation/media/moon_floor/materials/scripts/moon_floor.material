@@ -1,0 +1,15 @@
+material moon_floor/Diffuse
+{
+  receive_shadows off
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture moon_texture.jpg
+        scale 0.25 0.25
+      }
+    }
+  }
+}

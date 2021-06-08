@@ -1,0 +1,14 @@
+material aruco_marker_3/Diffuse
+{
+  receive_shadows off
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture aruco_marker_3_border_100.jpeg
+      }
+    }
+  }
+}

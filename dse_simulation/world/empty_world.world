@@ -2,6 +2,7 @@
 
 <sdf version="1.5">
 	<world name="default">
+
 		<!-- A global light source -->
 		<include>
 			<uri>model://sun</uri>
@@ -10,11 +11,6 @@
 		<!-- A ground plane -->
 		<include>
 			<uri>model://ground_plane</uri>
-		</include>
-
-        	<!-- Our custom model -->
-		<include>
-			<uri>model://aruco_marker</uri>
 		</include>
 	</world>
 </sdf>

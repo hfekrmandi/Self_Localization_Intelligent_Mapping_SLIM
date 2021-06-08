@@ -1,46 +1,83 @@
+# Autonomous-GNC-MAS
+
+If you do not have ROS installed, follow the tutorial here for Ubuntu 18.04: http://wiki.ros.org/melodic/Installation/Ubuntu (Note- install ros-melodic-desktop-full, as this code currently requires the gazebo simulator to function). Follow all steps on that page and then continue with this document. 
+This code will not work with noetic or any future versions as of 5/11/2021, since ROS is deprecating TF prefixes, which means that multi-agent simulations are all but dead. 
+
 Installing this code - 
-Option A: Use your catkin_ws in ~/
-	Henceforth this will be referred to as simulation_ws, just keep that in mind
-Option B: Create a new ROS workspace for this code:
-	Create a folder such as simulation_ws in ~/
-	Cd into it and create a src folder (mkdir src)
-	run catkin_make
+Create a new ROS workspace for this code: \
+... \
+mkdir ~/simulation_ws \
+cd ~/simulation_ws \
+mkdir src \
+catkin_make \
+...
 
-Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone these 3 turtlebot ROS packages:
-https://github.com/ROBOTIS-GIT/turtlebot3
-https://github.com/ROBOTIS-GIT/turtlebot3_msgs
-https://github.com/ROBOTIS-GIT/turtlebot3_simulations
+Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages: \
+... \
+cd ~/simulation_ws/src \
+git clone -b dev_inf_filter https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM \
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3 \
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_msgs \
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations \
+cd .. \
+catkin_make
 
-Then run cd .. (you should be in ~/simulation_ws), and run catkin_make again
+sudo apt update \
+sudo apt install python pip-python \
+pip install scipy numpy opencv-python opencv-contrib-python \
+...
+
+Replace (USER) with your username (you can see it with echo $USER). \
+... \
+echo "source ~/simulation_ws/devel/setup.bash" >> ~/.bashrc \ 
+source ~/.bashrc \
+...
+
 Your directories should look like:
-~/simulation_ws
+- ~/simulation_ws
 	- build
 	- devel
 		- setup.bash
 	- src
-		- Autonomous-GNC-MAS
+		- Self_Localization_Intelligent_Mapping_SLIM
 			- Autonomous-GNC-MAS
 			- dse_msgs
 			- dse_simulation
+			- dse_simulation_gazebo
+			- dse_simulation_python
+			- dse_simulation_real
+			- dse_turtlebot_descriptions
 			- README.md
-		- CMakeLists.txt
 		- tureltbot3
 		- turtlebot3_msgs
 		- turtlebot3_simulations
 
-Now, each time you open a new terminal make sure to run:
-export TURTLEBOT3_MODEL=waffle_pi
-source ~/simulation_ws/devel/setup.bash
+I also highly recommend installing terminator. It allows you to easily run multiple terminals simultaneously.
+With it open, you can use Ctrl-Shift-E to split a terminal horizontally, and Ctrl-Shift-O to split vertically. \
+... \
+sudo apt update \
+sudo apt install terminator \
+...
 
-Now you should be able to run a launch file, ex:
-roslaunch dse_simulation aruco_test.launch
+And for writing code, I recommend pycharm community. It can be installed through the ubuntu software center. Then, launch it from a terminal \
+... \
+pycharm-community \
+... \
+and open a project -> select the Self_Localization_Intelligent_Mapping_SLIM folder. Set up the interpreter to be your system's python3 executable, File -> Settings -> Project -> Python Interpereter -> (click on the gear on the right) -> Add... -> Existing Environment -> Add /usr/bin/python3. This will ensure that pycharm has your installed python libraries and all of the ROS libraries.  \
 
-This launch file starts a gazebo world, spawns in a turtlebot and a cube with aruco tags on each face. It also starts a camera node, aruco_pose_estimation, which will use the turtlebot's camera to generate pose estimates of any observed tags. 
+To test this code:  \
+... \
+roslaunch dse_simulation demo_1_agent.launch \
+... \
+This will start a gazebo simulation with a single agent and 3 tags lined up in front of it. Each of the 3 tags is seen and estimated by the agent. The estimates are visualized as a sample of 50 vectors from the mean and covariance of the estimate (Will be improved later to a covariance ellipse). \
 
-Other launch files:
-- dse_sim_3_robots.launch - Only 1 robot, but runs an information filter in the background.
-- dse_sim_3_robots_test_plot.launch - Instead of running a gazebo, this file uses a simulation node to create pose estimates for a robot, useful for testing/debugging.
-- dse_sim_3_robots_world_only.launch - Launches the gazebo world and robot, but no other nodes. Useful for testing/debugging individual nodes. 
+... \
+roslaunch dse_simulation 3_agents_moving_awayLine.launch \
+... \
+This will start a gazebo simulation with 3 agents facing 2 pairs of 2 tags. To start the agents moving, send a message to the controller of each agent. The consensus runs and combines the estimates of all agents. Rviz is set to display all objects as estimated by agent 0 (tb3_0).  \
+... \
+rostopic pub /control_on std_msgs/Bool "data: true" --once \
+...
 
 Visualizing in RVIZ
 - Run the launch file dse_sim_3_robots.launch
@@ -54,16 +91,16 @@ Visualizing in RVIZ
 		- It's recommended to change the true pose to green
 
 Node descriptions - 
-- aruco_pose_estimation_node in aruco_pose_estimation
+- aruco_pose_estimation_node in aruco_pose_estimation.py
 	- Inputs: Camera images
 	- Outputs: Poses and IDs of all observed tags
 	- What it does: uses the aruco library to find the pose of each tag, and publishes that pose in the robot's coordinate frame
-- information_filter_node in information_filter
+- information_filter_node in information_filter.py
 	- Inputs: Poses and IDs of all observed tags
 	- Outputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- What it does: Computes a step of the information filter
 	- Reference information filter here
-- direct_estimator_node in direct_estimator
+- direct_estimator_node in direct_estimator.py
 	- Inputs: Information filter prior and measurement (Y_01, y_01, delta_I and delta_i)
 	- Outputs: Information filter full estimate (Y_00 and y_00)
 	- What it does: Adds the prior and measurement to create the result, and publishes that. Replaces the consensus since it isn't implemented yet. 
@@ -81,7 +118,7 @@ Debugging the code -
 - In Pycharm (or any debugging python IDE)
 	- In a terminal, source ~/simulation_ws/devel/setup.bash
 	- Then start the IDE from that terminal (Ensures that it knows about ROS libraries/messages
-	- Ensure that you are using Python 2.7
+	- Ensure that you are using your python 3 interpreter (should be at /usr/bin/python3)
 	- Degug any node file as you would a normal Python file. 
 	- You can customize launch files to launch all other nodes, or start others individually through terminals
 - In RVIZ
@@ -104,5 +141,38 @@ Debugging the code -
 	- make sure that in the launch file for each node you have output="screen"
 
 Other files - 
-- src/dse_leb.py
-	- Library of functions for computing R, H, z, F, Q...
+- src/dse_lib.py
+	- Library of functions mainly for the information filter
+- src/consensus_lib.py
+	- Library of functions for the consensus
+
+Folder structure for this package:
+- Autonomous-GNC-MAS
+	ROS Meta-package folder, nothing important
+- dse_msgs
+	custom ROS messages
+- dse_simulation
+	Most everything
+	- documentation
+		rosgraphs and other documents showing the code flow
+	- launch
+		files to run worlds or simulations
+	- media
+		custom materials and models used in simulations
+	- rviz
+		rviz configs, usually one per simulation that preselects topics of interest
+	- src
+		All of the python code files. Each ROS node is its own file here
+    - test
+        Files for unit testing
+	- world
+		Simulation world files. Defines what is in the environment
+- dse_simulation_gazebo
+	Nothing yet, the idea is this holds gazebo-specific files and simulations
+- dse_simulation_python
+	Nothing yet, the idea is this holds lower-level python only simulations
+- dse_simulation_real
+	Nothing yet, the idea is this holds code for running on a real turtlebot
+- dse_turtlebot_descriptions
+	files for custom turtlebots with Aruco tags mounted on top of them. Also contains edited turtlebot3 files for changing the camera. 
+- README.md
