@@ -34,6 +34,7 @@ class information_filter:
         if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
             self.ros_prefix = '/' + self.ros_prefix
         self.this_agent_id = rospy.get_param('~id')
+        self.rate = rospy.get_param('~rate', 10)
         self.dim_state = rospy.get_param('~dim_state')
         self.fixed_ids = rospy.get_param('~fixed_ids', [])
         self.fixed_states = rospy.get_param('~fixed_states', [])
@@ -77,8 +78,8 @@ class information_filter:
             rospy.signal_shutdown('invalid state dimension passed in')
 
         # Define static variables
-        self.dt = 0.1
-        self.t_last = rospy.get_time()
+        self.dt = 1 / self.rate
+        self.t_last = rospy.Time.now().to_sec()
         self.euler_order = dse_constants.EULER_ORDER
 
         # Define information variables
@@ -121,9 +122,9 @@ class information_filter:
     # When the camera sends a measurement
     def measurement_callback(self, data):
         # Compute the actual dt
-        self.dt = rospy.get_time() - self.t_last
-        self.t_last = rospy.get_time()
-        self.dt = 0.1
+        # self.dt = rospy.Time.now().to_sec() - self.t_last
+        # self.t_last = rospy.get_time()
+        # self.dt = 0.05
 
         # Grab the tag poses from the camera
         observed_poses = data.pose_array
@@ -173,9 +174,9 @@ class information_filter:
         for i in range(len(z_0) // 3):
             while y[2 + 3*i] > np.pi or y[2 + 3*i] < -np.pi:
                 if y[2 + 3*i] > np.pi:
-                    z_0[2 + 3*i] = z_0[2 + 3*i] - 2 * np.pi
+                    z_0[2 + 3*i] -= 2 * np.pi
                 if y[2 + 3*i] < -np.pi:
-                    z_0[2 + 3*i] = z_0[2 + 3*i] + 2 * np.pi
+                    z_0[2 + 3*i] += 2 * np.pi
                 y = z_0 - H_0.dot(x_11)
 
         P_11 = np.linalg.inv(Y_11)

@@ -15,54 +15,10 @@ import tf2_geometry_msgs
 from dse_msgs.msg import PoseMarkers
 from scipy.spatial.transform import Rotation as R
 import dse_lib
+import gazebo_lib
 import copy
 
 roslib.load_manifest('dse_simulation')
-
-
-def noisy_transform(transform):
-    true_position = transform.transform.translation
-    true_orientation = transform.transform.rotation
-    true_xyz = np.array([true_position.x, true_position.y, true_position.z])
-    true_eul = dse_lib.quat_from_pose2eul(true_orientation)
-    true_state = np.concatenate((true_xyz, true_eul))
-    true_distance = np.linalg.norm(true_xyz)
-
-    # add = [0, 0, 0, 0, 0, 0]
-    # mult = [1, 1, 1, 1, 1, 1]
-    noise = np.random.multivariate_normal([0, 0, 0, 0, 0, 0], dse_lib.R_from_range(true_distance))
-    sim_state = true_state + noise
-
-    [true_position.x, true_position.y, true_position.z] = sim_state[0:3]
-    true_orientation = dse_lib.euler2quat_from_pose(true_orientation, sim_state[3:6, None])
-    covariance = dse_lib.covariance_to_ros_covariance(dse_lib.R_from_range(true_distance))
-    return transform, covariance
-
-
-def transform_to_pose_stamped_covariance(transform, covariance):
-    pose_stamped = PoseWithCovarianceStamped()
-    pose_stamped.header = transform.header
-    pose_stamped.pose.pose.position = transform.transform.translation
-    pose_stamped.pose.pose.orientation = transform.transform.rotation
-    pose_stamped.pose.covariance = covariance
-    return pose_stamped
-
-
-def transform_to_pose_stamped(transform):
-    pose_stamped = PoseStamped()
-    pose_stamped.header = transform.header
-    pose_stamped.pose.position = transform.transform.translation
-    pose_stamped.pose.orientation = transform.transform.rotation
-    return pose_stamped
-
-
-def pose_stamped_to_pose_stamped_covariance(pose, covariance):
-    pose_covar = PoseWithCovarianceStamped()
-    pose_covar.header = pose.header
-    pose_covar.pose.pose.position = pose.pose.position
-    pose_covar.pose.pose.orientation = pose.pose.orientation
-    pose_covar.pose.covariance = covariance
-    return pose_covar
 
 
 class fake_pose_sensor:
@@ -81,7 +37,6 @@ class fake_pose_sensor:
         self.ros_prefix = rospy.get_param('~prefix', '')
         if len(self.ros_prefix) != 0 and self.ros_prefix[0] != '/':
             self.ros_prefix = '/' + self.ros_prefix
-        # side length of tag in meters
         self.r = rospy.Rate(rospy.get_param('~rate', 10))
         # max measurement distance in meters
         self.meas_threshold = rospy.get_param('~meas_threshold', 5)
@@ -170,18 +125,18 @@ class fake_pose_sensor:
                 tag_in_world_xfm = self.tfBuffer.lookup_transform(
                     world_tf, tag_tf, rospy.Time(0))
 
-                robot_in_tag_xfm_noisy, covariance = noisy_transform(robot_in_tag_xfm)
-                robot_in_tag_pose = transform_to_pose_stamped(robot_in_tag_xfm_noisy)
+                robot_in_tag_xfm_noisy, covariance = gazebo_lib.noisy_transform(robot_in_tag_xfm)
+                robot_in_tag_pose = gazebo_lib.transform_to_pose_stamped(robot_in_tag_xfm_noisy)
                 robot_in_world_pose = tf2_geometry_msgs.do_transform_pose(robot_in_tag_pose, tag_in_world_xfm)
 
-                pose_stamped = pose_stamped_to_pose_stamped_covariance(robot_in_world_pose, covariance)
+                pose_stamped = gazebo_lib.pose_stamped_to_pose_stamped_covariance(robot_in_world_pose, covariance)
                 sim_poses.ids.append(self.fixed_relations[id][0])
             else:
                 tag_in_robot_xfm = self.tfBuffer.lookup_transform(
                     robot_tf, tag_tf, rospy.Time(0))
 
-                tag_in_robot_xfm_noisy, covariance = noisy_transform(tag_in_robot_xfm)
-                pose_stamped = transform_to_pose_stamped_covariance(tag_in_robot_xfm, covariance)
+                tag_in_robot_xfm_noisy, covariance = gazebo_lib.noisy_transform(tag_in_robot_xfm)
+                pose_stamped = gazebo_lib.transform_to_pose_stamped_covariance(tag_in_robot_xfm, covariance)
                 sim_poses.ids.append(id)
 
             sim_poses.pose_array.append(pose_stamped)

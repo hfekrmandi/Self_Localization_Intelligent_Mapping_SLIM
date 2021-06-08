@@ -606,23 +606,23 @@ def fill_FQ_our_control(id_list, this_agent_id, dt, x_11, dim_state):
             if dim_state == 6:
                 # Q is a function of distance traveled in the last time step
                 # Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
-                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.001*dt)**2)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.01*dt)**2)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
             else:
                 # Q is a function of distance traveled in the last time step
                 # Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
-                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.001*dt)**2)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.01*dt)**2)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
         else:
             if dim_state == 6:
                 # Q is a function of distance traveled in the last time step
                 # Q_0[i_low:i_high, i_low:i_high] = q_distance_3D(dt, x_11, i, dim_state)
-                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.02*dt)**2)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.04*dt)**2)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle_3D(dt, x_11, i, dim_state)
             else:
                 # Q is a function of distance traveled in the last time step
                 # Q_0[i_low:i_high, i_low:i_high] = q_distance(dt, x_11, i, dim_state)
-                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.02*dt)**2)
+                Q_0[i_low:i_high, i_low:i_high] = q_const(dim_state, (0.04*dt)**2)
                 F_0[i_low:i_high, i_low:i_high] = f_unicycle(dt, x_11, i, dim_state)
 
     return F_0, Q_0
@@ -684,7 +684,7 @@ def fill_RHz_fixed(id_list, my_id, observed_ids, observed_poses, x_11, euler_ord
     # Define the sizes of each variable
     n_stored = len(id_list)
     n_obs = len(observed_ids)
-    R_var = 0.001
+    R_var = 0.01
     R_0 = R_var * np.eye(n_obs * dim_obs)
     H_0 = np.zeros((n_obs * dim_obs, n_stored * dim_state))
     z_0 = np.zeros((n_obs * dim_obs, 1))
@@ -798,7 +798,7 @@ def fill_RHz_fixed_our_vel_2D(id_list, my_id, observed_ids, observed_poses, x_11
     xy_vel = np.array([ctrl.linear.x, ctrl.linear.y])
     [local_x_vel, local_y_vel] = xy_vel.dot(theta_2_rotm(x_11[(6*index)+2]))
     z_vel = np.array([local_x_vel, local_y_vel, ctrl.angular.z])
-    R_0[i_low+3:i_high, i_low+3:i_high] = (0.01)**2 * np.eye(3)
+    R_0[i_low+3:i_high, i_low+3:i_high] = np.diag([0.01**2, 0.01**2, 0.01**2])
     H_0[i_low+3:i_high, (6*index)+3:(6*index)+6] = np.eye(3)
     z_0[i_low+3:i_high] = z_vel[:, None]
 

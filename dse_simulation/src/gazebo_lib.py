@@ -1,31 +1,22 @@
-#!/usr/bin/env python2
 import rospy
 from std_msgs.msg import String
 from gazebo_msgs.msg import ModelStates
-
-"""
-string[] name
-geometry_msgs/Pose[] pose
-  geometry_msgs/Point position
-    float64 x
-    float64 y
-    float64 z
-  geometry_msgs/Quaternion orientation
-    float64 x
-    float64 y
-    float64 z
-    float64 w
-geometry_msgs/Twist[] twist
-  geometry_msgs/Vector3 linear
-    float64 x
-    float64 y
-    float64 z
-  geometry_msgs/Vector3 angular
-    float64 x
-    float64 y
-    float64 z
-
-"""
+import os
+import roslib
+import sys
+import rospy
+import numpy as np
+import cv2
+import tf2_ros
+import datetime
+import time
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped
+import tf2_geometry_msgs
+from dse_msgs.msg import PoseMarkers
+from scipy.spatial.transform import Rotation as R
+import dse_lib
+import copy
 
 class GazeboModel(object):
     def __init__(self, robots_name_list = ['mobile_base_2', 'mobile_base_1']):
@@ -132,5 +123,53 @@ def listener():
         rate.sleep()
     #rospy.spin()
 
-if __name__ == '__main__':
-    listener()
+
+def noisy_transform(transform):
+    true_position = transform.transform.translation
+    true_orientation = transform.transform.rotation
+    true_xyz = np.array([true_position.x, true_position.y, true_position.z])
+    true_eul = dse_lib.quat_from_pose2eul(true_orientation)
+    true_state = np.concatenate((true_xyz, true_eul))
+    true_distance = np.linalg.norm(true_xyz)
+
+    # add = [0, 0, 0, 0, 0, 0]
+    # mult = [1, 1, 1, 1, 1, 1]
+    noise = np.random.multivariate_normal([0, 0, 0, 0, 0, 0], dse_lib.R_from_range(true_distance))
+    sim_state = true_state + noise
+
+    [true_position.x, true_position.y, true_position.z] = sim_state[0:3]
+    true_orientation = dse_lib.euler2quat_from_pose(true_orientation, sim_state[3:6, None])
+    covariance = dse_lib.covariance_to_ros_covariance(dse_lib.R_from_range(true_distance))
+    return transform, covariance
+
+
+def transform_to_pose_stamped_covariance(transform, covariance):
+    pose_stamped = PoseWithCovarianceStamped()
+    pose_stamped.header = transform.header
+    pose_stamped.pose.pose.position = transform.transform.translation
+    pose_stamped.pose.pose.orientation = transform.transform.rotation
+    pose_stamped.pose.covariance = covariance
+    return pose_stamped
+
+
+def transform_to_pose_stamped(transform):
+    pose_stamped = PoseStamped()
+    pose_stamped.header = transform.header
+    pose_stamped.pose.position = transform.transform.translation
+    pose_stamped.pose.orientation = transform.transform.rotation
+    return pose_stamped
+
+
+def pose_stamped_to_pose_stamped_covariance(pose, covariance):
+    pose_covar = PoseWithCovarianceStamped()
+    pose_covar.header = pose.header
+    pose_covar.pose.pose.position = pose.pose.position
+    pose_covar.pose.pose.orientation = pose.pose.orientation
+    pose_covar.pose.covariance = covariance
+    return pose_covar
+
+
+def object_pose_in_world(object_tf, tfBuffer, world_tf='world'):
+    object_in_world_xfm = tfBuffer.lookup_transform(world_tf, object_tf, rospy.Time(0))
+    pose_stamped = transform_to_pose_stamped(object_in_world_xfm)
+    return pose_stamped

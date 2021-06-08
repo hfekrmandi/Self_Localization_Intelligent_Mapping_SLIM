@@ -34,7 +34,7 @@ roslib.load_manifest('dse_simulation')
 
 def main(args):
 
-    dump_file = "simulation_data_consensus_separated.p"
+    dump_file = "simulation_data_noconsensus.p"
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -71,7 +71,8 @@ def main(args):
     plt.grid()
     plt.plot(0, 0, 'k.-', lw=2, label='true')
     plt.plot(0, 0, 'k--', lw=1, label='estimated')
-    for i in range(num_objects):
+    # for i in range(num_objects):
+    for i in [0]:
         if object_ids[i] in agent_ids:
             name = agent_names[agent_ids.index(object_ids[i])]
             if name[0] == '/':
@@ -80,7 +81,7 @@ def main(args):
             name = object_names[i]
         true_data = true_poses[agent_index][start:end, i]
         est_data = est_poses[agent_index][start:end, i]
-        plt.plot(true_data[:, 0], true_data[:, 1], colors[i % len(colors)] + '.-', lw=2)
+        plt.plot(true_data[:, 0], true_data[:, 1], colors[i % len(colors)] + '.-', lw=1)
         plt.plot(est_data[:, 0], est_data[:, 1], colors[i % len(colors)] + '--', lw=2, label=name)
 
         ax = plt.gca()
@@ -100,7 +101,8 @@ def main(args):
     #plt.tight_layout()
     plt.grid()
     #plt.xlim(15, 70)
-    for i in range(num_objects):
+    # for i in range(num_objects):
+    for i in [0]:
         if object_ids[i] in agent_ids:
             name = agent_names[agent_ids.index(object_ids[i])]
             if name[0] == '/':
@@ -112,14 +114,18 @@ def main(args):
         time_data = time[agent_index][start:end]
         error = true_data - est_data
         error_dist = np.sqrt(error[:, 0] ** 2 + error[:, 1] ** 2)
+        for j in range(len(error_dist)):
+            if error_dist[j] > 0.5:
+                print()
         plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '--', lw=2, label=name)
 
         covar_x = est_covariances[agent_index][start:end, i, 0, 0]
         covar_y = est_covariances[agent_index][start:end, i, 1, 1]
-        covar = np.sqrt(covar_x**2 + covar_y**2)
-        plt.fill_between(np.array(time_data), error_dist - covar, error_dist + covar, color=colors[i % len(colors)], alpha=0.2)
+        costd = np.sqrt(np.sqrt(covar_x**2 + covar_y**2))
+        plt.fill_between(np.array(time_data), error_dist - costd, error_dist + costd, color=colors[i % len(colors)], alpha=0.2)
 
     plt.legend()
+    plt.ylim(0, 0.5)
     plt.xlabel('time (seconds)')
     plt.ylabel('distance error (m)')
     plt.title('error vs. time')

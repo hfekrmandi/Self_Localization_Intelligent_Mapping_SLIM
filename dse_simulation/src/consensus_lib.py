@@ -15,6 +15,7 @@ from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 import copy
 
+import dse_lib
 import dse_constants
 
 #
@@ -91,8 +92,68 @@ def get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_s
 
     return array_ids, array_Y, array_y, array_I, array_i
 
+
+def sub_matrix(matrix, indices):
+    out = np.zeros((len(indices), len(indices)))
+    for i in range(len(indices)):
+        for j in range(len(indices)):
+            out[i, j] = matrix[indices[i], indices[j]]
+    return out
+
+
+def all_but_sub_matrix(matrix, indices):
+    all_indices = np.arange(len(matrix))
+    other_indices = np.setdiff1d(all_indices, indices)
+    out = np.zeros((len(other_indices), len(other_indices)))
+    for i in range(len(other_indices)):
+        for j in range(len(other_indices)):
+            out[i, j] = matrix[other_indices[i], other_indices[j]]
+    return out
+
+
+def break_agents_into_groups(adj_to_cons_ind, order_to_id, adj, array_ids, array_Y, array_y, array_I, array_i):
+
+    groups = []
+    grouped_adjs = []
+    grouped_adj_inds = []
+
+    size_group, nComponents, members = networkComponents(adj)
+
+    # If we are fully connected, just return the
+    if nComponents == 1:
+        return [[adj_to_cons_ind, order_to_id, adj, array_ids, array_Y, array_y, array_I, array_i]]
+
+    # Break ajacency matrix into connected blocks
+    for i in range(nComponents):
+        sub_adj = sub_matrix(adj, members[i])
+        grouped_adjs.append([members[i], sub_adj])
+        # adj_use, sub_adj_inds = all_but_sub_matrix(adj_use, adj_inds)
+
+    for grouped_adj in grouped_adjs:
+        group_adj_to_cons_ind = []
+        group_order_to_id = []
+        size_group = len(grouped_adj[0])
+        group_array_ids = []
+        group_array_Y = []
+        group_array_y = []
+        group_array_I = []
+        group_array_i = []
+        for index, adj_index in enumerate(grouped_adj[0]):
+            group_array_ids.append(array_ids[adj_index])
+            group_array_Y.append(array_Y[adj_index])
+            group_array_y.append(array_y[adj_index])
+            group_array_I.append(array_I[adj_index])
+            group_array_i.append(array_i[adj_index])
+            group_adj_to_cons_ind.append(adj_to_cons_ind[adj_index])
+            group_order_to_id.append(order_to_id[adj_index])
+        group = [group_adj_to_cons_ind, group_order_to_id, grouped_adj[1], group_array_ids, group_array_Y, group_array_y,
+                 group_array_I, group_array_i]
+        groups.append(group)
+    return groups
+
+
 #
-# # Update the momory_id_comm list in each agent to include each agent they
+# # Update the memory_id_comm list in each agent to include each agent they
 # # can communicate with (based on a communication model).
 # def apply_comm_model_obs(agents):
 #
@@ -143,6 +204,7 @@ def apply_comm_model(obs_lists, method_='connected'):
 #       for each agent in the group: # This includes the agent itself
 #           i, I += (i, I)*graph.p
 #       y, Y = y, Y + (percentage of consensus steps run) * number of agents this agent is connected to * (i, I)
+
 
 # Perform one consensus step
 def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, dim_state, num_steps=20):
@@ -324,6 +386,7 @@ def networkComponents(adj):
 
     return size_group, nComponents, members
 
+
 # Computes the consensus weights (p)
 # and the inclusive degree of each node (d)
 #   It computes the degree of each node and adds 1, assuming the graph is not self-connected at the start
@@ -364,6 +427,7 @@ def generate_graph(adj):
 
     return p, d
 
+
 # Not required - As long as weights add to 1, it's fine. ex: 1/n
 # Optimization
 #   S1 - Information matrices
@@ -388,6 +452,39 @@ def calc_ci_weights_simple(S1, local_inf_vec, method_):
     inf_mat = 0.5 * np.add(inf_mat, inf_mat.T)
 
     return weights_ci, inf_mat, inf_vec
+
+
+# Create an adjacency matrix for agents, with a maximum connection range and a link failure probabilty
+def get_communication_graph(num_agents, index_to_id, id_to_tf, tfBuffer, comm_threshold, fail_prob):
+    ids = list(range(num_agents))
+    adj = np.eye(len(ids))
+    done = []
+
+    for index in range(len(ids)):
+        for index2 in range(len(ids)):
+            # We already set the diagonal to 1s
+            if index == index2 or [index, index2] in done or [index2, index] in done:
+                continue
+
+            # measure the distance between the two objects
+            from_tf = id_to_tf[index_to_id[index]]
+            to_tf = id_to_tf[index_to_id[index2]]
+            transform = tfBuffer.lookup_transform(from_tf, to_tf, rospy.Time(0))
+            true_position = transform.transform.translation
+            true_xyz = np.array([true_position.x, true_position.y, true_position.z])
+            dist = np.linalg.norm(true_xyz)
+
+            # if communication is possible, set adj to 1
+            fail_num = np.random.uniform(0, 1)
+            if dist < comm_threshold and fail_num > fail_prob:
+                adj[index, index2] = 1
+
+            done.append([index, index2])
+    adj = adj + adj.T
+    adj[adj > 1] = 1
+
+    return adj
+
 
 # def calc_ci_weights_ver3(S1, local_inf_vec, method_):
 #     # Number of covariance matrices

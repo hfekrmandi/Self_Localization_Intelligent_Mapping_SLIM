@@ -50,8 +50,9 @@ class information_filter:
         # Get parameters from launch file
         # self.n_params = 3
         # self.dim_state = 6
-        # self.object_names = ['tb3_0', 'tb3_1', 'tb3_2', 'aruco_marker_0', 'aruco_marker_1', 'aruco_marker_2', 'aruco_marker_3']
-        # self.object_ids = [5, 6, 7, 0, 1, 2, 3]
+
+        # self.object_names = ['tb3_0', 'tb3_1', 'tb3_2']
+        # self.object_ids = [5, 6, 7]
         # self.agent_ids = [5, 6, 7]
         # self.dim_state = 6
         self.object_names = rospy.get_param('~objects')
@@ -108,6 +109,9 @@ class information_filter:
             i_max = i_min + self.dim_state
             this_pose = dse_lib.pose_from_state_3D(self.inf_x[i_min:i_max])
             this_xyy = dse_lib.state_to_xyzypr(dse_lib.state_from_pose_3D(this_pose))
+
+            # if this_xyy[2] - 1.5707633 < 0.0001:
+            #     print('weird error')
             est_pose.append(this_xyy)
             cov = dse_lib.sub_matrix(inf_P, inf_id_list, id, self.dim_state)
             cov = dse_lib.state_cov_to_covariance_matrix(cov)
@@ -116,10 +120,19 @@ class information_filter:
             this_xyy = dse_lib.state_to_xyzypr(dse_lib.state_from_pose_3D(this_pose))
             true_pose.append(this_xyy)
 
+        if len(self.est_poses[agent_index]) > 1 and np.linalg.norm(np.array(est_pose) - self.est_poses[agent_index][-1]) > 1:
+            print('error')
+
+        for est in est_pose:
+            if np.allclose(est, [-2, 0, np.pi/2]) or np.allclose(est, [0, 0, np.pi/2]) or np.allclose(est, [2, 0, np.pi/2]):
+                print('error')
+
         time = rospy.Time.now().secs + rospy.Time.now().nsecs / 1000000000
         self.time[agent_index].append(time)
         self.true_poses[agent_index].append(np.array(true_pose))
         self.est_poses[agent_index].append(np.array(est_pose))
+        # if est_pose[1][2] - 1.5707633 < 0.0001:
+        #     print('weird error')
         self.est_covariances[agent_index].append(est_covariance)
 
     def store_data(self, data):
