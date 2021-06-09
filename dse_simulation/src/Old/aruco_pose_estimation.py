@@ -17,7 +17,7 @@ from geometry_msgs.msg import Pose
 from dse_msgs.msg import PoseMarkers
 from cv_bridge import CvBridge, CvBridgeError
 from scipy.spatial.transform import Rotation as R
-import src.Self_Localization_Intelligent_Mapping_SLIM.dse_simulation.src.dse_lib
+import dse_lib
 
 roslib.load_manifest('dse_simulation')
 
@@ -140,7 +140,7 @@ class aruco_pose:
                 rvecs_reordered = [rvecs[0][0][2], rvecs[0][0][0], rvecs[0][0][1]]
                 r = R.from_rotvec(rvecs_reordered)
                 est_ypr = r.as_euler('zyx')
-                quat = src.Self_Localization_Intelligent_Mapping_SLIM.dse_simulation.src.dse_lib.eul2quat(est_ypr[:, None])
+                quat = dse_lib.eul2quat(est_ypr[:, None])
                 # r = R.from_euler('zyx', est_ypr + [np.pi, 0, np.pi])
                 # quat = r.as_quat
                 # print(quat[:])
