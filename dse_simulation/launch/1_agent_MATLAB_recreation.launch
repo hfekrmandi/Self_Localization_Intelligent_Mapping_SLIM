@@ -123,7 +123,7 @@
     <param name="dim_state" type="int" value="$(arg dim_state)" />
   </node>
 
-  <node pkg="dse_simulation" type="consensus_10hz.py" name="dse_consensus_node" output="screen">
+  <node pkg="dse_simulation" type="consensus_hyb.py" name="dse_consensus_node" output="screen">
     <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix)]</rosparam>
     <param name="dim_state" type="int" value="$(arg dim_state)" />
       <param name="rate" type="double" value="$(arg rate)" />

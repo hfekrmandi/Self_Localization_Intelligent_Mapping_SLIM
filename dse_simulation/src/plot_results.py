@@ -34,7 +34,7 @@ roslib.load_manifest('dse_simulation')
 
 def main(args):
 
-    dump_file = "simulation_data_noconsensus.p"
+    dump_file = "simulation_data_consensus.p"
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -54,7 +54,7 @@ def main(args):
     num_objects = len(object_ids)
     num_agents = len(agent_ids)
     colors = ['k', 'g', 'r', 'm', 'b', 'c', 'y']
-    agent_index = 0
+    agent_index = 1
     start_time = 0
     num_datapoints = np.shape(time[agent_index][time[agent_index] > start_time])[0]
     
@@ -71,8 +71,7 @@ def main(args):
     plt.grid()
     plt.plot(0, 0, 'k.-', lw=2, label='true')
     plt.plot(0, 0, 'k--', lw=1, label='estimated')
-    # for i in range(num_objects):
-    for i in [0]:
+    for i in range(num_objects):
         if object_ids[i] in agent_ids:
             name = agent_names[agent_ids.index(object_ids[i])]
             if name[0] == '/':
@@ -101,8 +100,7 @@ def main(args):
     #plt.tight_layout()
     plt.grid()
     #plt.xlim(15, 70)
-    # for i in range(num_objects):
-    for i in [0]:
+    for i in range(num_objects):
         if object_ids[i] in agent_ids:
             name = agent_names[agent_ids.index(object_ids[i])]
             if name[0] == '/':

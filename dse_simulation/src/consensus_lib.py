@@ -278,6 +278,78 @@ def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, d
     return array_ids, final_array_Y, final_array_y
 
 
+# Perform one consensus step
+def consensus_ici(order_to_id, array_ids, array_Y, array_y, array_I, array_i, adj, dim_state, num_steps=20):
+    # Perform consensus computations
+
+    array_ids, array_Y, array_y, array_I, array_i = \
+        get_sorted_agent_states(array_ids, array_Y, array_y, array_I, array_i, dim_state)
+
+    # array_comm is lists from each agent of who they received messages from.
+    # Compute MHMC weights
+    graph_p, graph_d = generate_graph(adj)
+    # Find connected groups, and for each group return the size of each group, the number of groups, and the agents in each group.
+    # For this work, we only use the size of each group
+    size_comp, nComponents, members = networkComponents(graph_p)
+
+    # Build mapping from agent index to group size
+    group_indices = np.zeros(len(array_Y), dtype=int)
+    for i in range(len(members)):
+        group_indices[members[i]] = i
+
+    # Arrays to store values for the next consensus step in
+    final_array_Y = np.zeros(np.shape(array_Y))
+    final_array_y = np.zeros(np.shape(array_y))
+    final_array_I = np.zeros(np.shape(array_I))
+    final_array_i = np.zeros(np.shape(array_i))
+
+    # Compute consensus steps
+    for step in range(num_steps):
+        # For each participating agent
+        for i in range(len(array_Y)):
+
+            # Grab variables from neighboring agents
+            idx_neighbors_indices = np.where(adj[i, :] != 0)[0]
+            Y_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_Y[0])[0], np.shape(array_Y[0])[1]))
+            y_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_y[0])[0], np.shape(array_y[0])[1]))
+
+            # Add in this agent's values
+            Y_local[-1, :, :] = array_Y[i]
+            y_local[-1, :, :] = array_y[i]
+
+            for j in range(np.shape(idx_neighbors_indices)[0]):
+                Y_local[j, :, :] = array_Y[idx_neighbors_indices[j]]
+                y_local[j, :, :] = array_y[idx_neighbors_indices[j]]
+
+            # Compute and apply CI weights
+            [weights_ci, Y_prior, y_prior] = calc_ci_weights_simple(Y_local, y_local, 'det')
+
+            delta_I = np.zeros(np.shape(array_I[0]))
+            delta_i = np.zeros(np.shape(array_i[0]))
+
+            for j in range(len(array_Y)):
+                p_jk = graph_p[i, j]
+
+                delta_I = delta_I + p_jk * array_I[j]
+                delta_i = delta_i + p_jk * array_i[j]
+
+            final_array_Y[i] = Y_prior
+            final_array_y[i] = y_prior
+            final_array_I[i] = delta_I
+            final_array_i[i] = delta_i
+
+        array_Y = copy.deepcopy(final_array_Y)
+        array_y = copy.deepcopy(final_array_y)
+        array_I = copy.deepcopy(final_array_I)
+        array_i = copy.deepcopy(final_array_i)
+
+    for i in range(len(array_Y)):
+        final_array_Y[i] = final_array_Y[i] + size_comp[group_indices[i]] * final_array_I[i]
+        final_array_y[i] = final_array_y[i] + size_comp[group_indices[i]] * final_array_i[i]
+
+    return array_ids, final_array_Y, final_array_y
+
+
 # # Given the agents' data, compute the consensus.
 # # Calls consensus_step
 # def consensus(order_to_id, array_ids, array_Y, array_y, array_I, array_i, array_comm, dim_state):
