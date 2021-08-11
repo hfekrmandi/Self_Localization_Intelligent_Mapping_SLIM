@@ -312,26 +312,33 @@ def consensus_ici(order_to_id, array_ids, array_Y, array_y, array_I, array_i, ad
             idx_neighbors_indices = np.where(adj[i, :] != 0)[0]
             Y_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_Y[0])[0], np.shape(array_Y[0])[1]))
             y_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_y[0])[0], np.shape(array_y[0])[1]))
+            I_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_I[0])[0], np.shape(array_I[0])[1]))
+            i_local = np.zeros((len(idx_neighbors_indices)+1, np.shape(array_i[0])[0], np.shape(array_i[0])[1]))
 
             # Add in this agent's values
             Y_local[-1, :, :] = array_Y[i]
             y_local[-1, :, :] = array_y[i]
+            I_local[-1, :, :] = array_I[i]
+            i_local[-1, :, :] = array_i[i]
 
             for j in range(np.shape(idx_neighbors_indices)[0]):
                 Y_local[j, :, :] = array_Y[idx_neighbors_indices[j]]
                 y_local[j, :, :] = array_y[idx_neighbors_indices[j]]
+                I_local[j, :, :] = array_I[idx_neighbors_indices[j]]
+                i_local[j, :, :] = array_i[idx_neighbors_indices[j]]
 
             # Compute and apply CI weights
             [weights_ci, Y_prior, y_prior] = calc_ci_weights_simple(Y_local, y_local, 'det')
+            [weights_ci, delta_I, delta_i] = calc_ci_weights_simple(I_local, i_local, 'det')
 
-            delta_I = np.zeros(np.shape(array_I[0]))
-            delta_i = np.zeros(np.shape(array_i[0]))
-
-            for j in range(len(array_Y)):
-                p_jk = graph_p[i, j]
-
-                delta_I = delta_I + p_jk * array_I[j]
-                delta_i = delta_i + p_jk * array_i[j]
+            # delta_I = np.zeros(np.shape(array_I[0]))
+            # delta_i = np.zeros(np.shape(array_i[0]))
+            #
+            # for j in range(len(array_Y)):
+            #     p_jk = graph_p[i, j]
+            #
+            #     delta_I = delta_I + p_jk * array_I[j]
+            #     delta_i = delta_i + p_jk * array_i[j]
 
             final_array_Y[i] = Y_prior
             final_array_y[i] = y_prior

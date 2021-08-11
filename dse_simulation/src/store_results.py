@@ -123,9 +123,9 @@ class information_filter:
         if len(self.est_poses[agent_index]) > 1 and np.linalg.norm(np.array(est_pose) - self.est_poses[agent_index][-1]) > 1:
             print('error')
 
-        for est in est_pose:
-            if np.allclose(est, [-2, 0, np.pi/2]) or np.allclose(est, [0, 0, np.pi/2]) or np.allclose(est, [2, 0, np.pi/2]):
-                print('error')
+        # for est in est_pose:
+        #     if np.allclose(est, [-2, 0, np.pi/2]) or np.allclose(est, [0, 0, np.pi/2]) or np.allclose(est, [2, 0, np.pi/2]):
+        #         print('error')
 
         time = rospy.Time.now().secs + rospy.Time.now().nsecs / 1000000000
         self.time[agent_index].append(time)

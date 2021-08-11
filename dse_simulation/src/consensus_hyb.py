@@ -54,11 +54,11 @@ class hybrid_consensus:
         id_to_tf_arr = rospy.get_param('~id_to_tf')
 
         # self.dim_state = 6
-        # self.object_names = ['tb3_0']#, 'tb3_1', 'tb3_2']
-        # self.comm_threshold = 0
+        # self.object_names = ['tb3_0', 'tb3_1', 'tb3_2']
+        # self.comm_threshold = 5
         # self.fail_prob = 0
         # self.r = rospy.Rate(10)
-        # id_to_tf_arr = [[5, 'tb3_0/base_footprint']]#, [6, 'tb3_1/base_footprint'], [7, 'tb3_2/base_footprint']]
+        # id_to_tf_arr = [[5, 'tb3_0/base_footprint'], [6, 'tb3_1/base_footprint'], [7, 'tb3_2/base_footprint']]
 
         self.id_to_tf = {}
         for val in id_to_tf_arr:
@@ -136,14 +136,14 @@ class hybrid_consensus:
             # adj = np.ones((len(self.inf_indices), len(self.inf_indices)))
             adj = consensus_lib.get_communication_graph(len(agents), order_to_id, self.id_to_tf, self.tfBuffer,
                                                         self.comm_threshold, self.fail_prob)
-            #print('adj graph:')
-            #print(adj)
+            print('adj graph:')
+            print(adj)
 
             groups = consensus_lib.break_agents_into_groups(agents, order_to_id, adj, array_ids, array_Y, array_y,
                                                             array_I, array_i)
 
             if self.last is None:
-                self.last = [None]*len(groups)
+                self.last = [None]*len(agents)
 
             count = 0
             for group in groups:
@@ -167,11 +167,11 @@ class hybrid_consensus:
                     inf_results.inf_vector = dse_lib.multi_array_2d_input(inf_y[i], inf_results.inf_vector)
                     self.inf_pubs[agent].publish(inf_results)
 
-                # this_x = np.linalg.inv(inf_Y).dot(inf_y)[0,:,0,0]
-                # if self.last[count] is not None and np.any(np.abs((this_x - self.last[count])) > 1.5):
-                #     print('error')
-                # self.last[count] = this_x
-                # count += 1
+                this_x = np.linalg.inv(inf_Y).dot(inf_y)[0,:,0,0]
+                if self.last[count] is not None and np.any(np.abs((this_x - self.last[count])) > 1):
+                    print('$$$$$$$$$$$$$$$$$$$$ ERROR $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+                self.last[count] = this_x
+                count += 1
 
             self.inf_indices = []
             self.inf_id_list = []
@@ -183,7 +183,7 @@ class hybrid_consensus:
 
             current = rospy.Time.now().to_sec()
             diff = current - start
-            #print('consensus time: ', diff)
+            print('consensus time: ', diff)
         self.mutex.release()
 
 

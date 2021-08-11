@@ -34,7 +34,7 @@ roslib.load_manifest('dse_simulation')
 
 def main(args):
 
-    dump_file = "simulation_data_consensus.p"
+    dump_file = "simulation_data_split_cons.p"
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -53,7 +53,7 @@ def main(args):
 
     num_objects = len(object_ids)
     num_agents = len(agent_ids)
-    colors = ['k', 'g', 'r', 'm', 'b', 'c', 'y']
+    colors = ['k', 'r', 'y']
     agent_index = 1
     start_time = 0
     num_datapoints = np.shape(time[agent_index][time[agent_index] > start_time])[0]
@@ -61,7 +61,7 @@ def main(args):
     start = np.shape(time[agent_index])[0] - num_datapoints 
     end = np.shape(time[agent_index])[0]
 
-    covar_points = np.arange(start, end, 100)
+    covar_points = np.arange(start, end, 1000)
 
     plt.figure()
     #plt.tight_layout()
@@ -69,7 +69,7 @@ def main(args):
     #plt.subplot(211)
     #plt.tight_layout()
     plt.grid()
-    plt.plot(0, 0, 'k.-', lw=2, label='true')
+    plt.plot(0, 0, 'k-', lw=1, label='true')
     plt.plot(0, 0, 'k--', lw=1, label='estimated')
     for i in range(num_objects):
         if object_ids[i] in agent_ids:
@@ -80,15 +80,28 @@ def main(args):
             name = object_names[i]
         true_data = true_poses[agent_index][start:end, i]
         est_data = est_poses[agent_index][start:end, i]
-        plt.plot(true_data[:, 0], true_data[:, 1], colors[i % len(colors)] + '.-', lw=1)
-        plt.plot(est_data[:, 0], est_data[:, 1], colors[i % len(colors)] + '--', lw=2, label=name)
+        for j in range(len(est_data[:, 0])):
+            if 2 < j < len(est_data[:, 0])-2:
+                if np.linalg.norm(est_data[j-1] - est_data[j]) > 0.1 and np.linalg.norm(est_data[j] - est_data[j+1]) > 0.1:
+                    est_data[j] = est_data[j - 1]
+                if np.linalg.norm(est_data[j-2] - est_data[j]) > 0.1 and np.linalg.norm(est_data[j] - est_data[j+1]) > 0.1:
+                    est_data[j] = est_data[j - 2]
+                if np.linalg.norm(est_data[j-1] - est_data[j]) > 0.1 and np.linalg.norm(est_data[j] - est_data[j+2]) > 0.1:
+                    est_data[j] = est_data[j-1]
+        for j in range(len(est_data[:, 0])):
+            if 1 < j < len(est_data[:, 0])-1:
+                if np.linalg.norm(est_data[j-1] - est_data[j]) > 0.1 and np.linalg.norm(est_data[j] - est_data[j+1]) > 0.1:
+                    est_data[j] = est_data[j-1]
 
-        ax = plt.gca()
-        for ellipse in covar_points:
-            xy = est_data[ellipse]
-            width = est_covariances[agent_index][ellipse, i, 0, 0]
-            height = est_covariances[agent_index][ellipse, i, 1, 1]
-            ax.add_patch(Ellipse(xy=xy, width=width, height=height, edgecolor=colors[i % len(colors)], fc='None'))
+        plt.plot(true_data[:, 0], true_data[:, 1], colors[i % len(colors)] + '-', lw=1)
+        plt.plot(est_data[:, 0], est_data[:, 1], colors[i % len(colors)] + '--', lw=1, label=name)
+
+        # ax = plt.gca()
+        # for ellipse in covar_points:
+        #     xy = est_data[ellipse]
+        #     width = est_covariances[agent_index][ellipse, i, 0, 0]
+        #     height = est_covariances[agent_index][ellipse, i, 1, 1]
+        #     ax.add_patch(Ellipse(xy=xy, width=width, height=height, edgecolor=colors[i % len(colors)], fc='None'))
 
     plt.legend()
     plt.xlabel('x (m)')
@@ -115,7 +128,40 @@ def main(args):
         for j in range(len(error_dist)):
             if error_dist[j] > 0.5:
                 print()
-        plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '--', lw=2, label=name)
+        plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '-', lw=2, label=name)
+
+        covar_x = est_covariances[agent_index][start:end, i, 0, 0]
+        covar_y = est_covariances[agent_index][start:end, i, 1, 1]
+        costd = np.sqrt(np.sqrt(covar_x**2 + covar_y**2))
+        #plt.fill_between(np.array(time_data), error_dist - costd, error_dist + costd, color=colors[i % len(colors)], alpha=0.2)
+
+    plt.legend()
+    plt.ylim(0, 0.5)
+    plt.xlabel('time (seconds)')
+    plt.ylabel('distance error (m)')
+    plt.title('error vs. time')
+
+    plt.figure()
+    #plt.subplot(212)
+    #plt.tight_layout()
+    plt.grid()
+    #plt.xlim(15, 70)
+    for i in range(num_objects):
+        if object_ids[i] in agent_ids:
+            name = agent_names[agent_ids.index(object_ids[i])]
+            if name[0] == '/':
+                name = name[1:]
+        else:
+            name = object_names[i]
+        true_data = true_poses[agent_index][start:end, i]
+        est_data = est_poses[agent_index][start:end, i]
+        time_data = time[agent_index][start:end]
+        error = true_data - est_data
+        error_dist = np.sqrt(error[:, 0] ** 2 + error[:, 1] ** 2)
+        for j in range(len(error_dist)):
+            if error_dist[j] > 0.5:
+                print()
+        plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '-', lw=2, label=name)
 
         covar_x = est_covariances[agent_index][start:end, i, 0, 0]
         covar_y = est_covariances[agent_index][start:end, i, 1, 1]

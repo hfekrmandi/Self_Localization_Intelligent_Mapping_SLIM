@@ -15,7 +15,7 @@ catkin_make \
 Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages: \
 ... \
 cd ~/simulation_ws/src \
-git clone -b dev_inf_filter https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM \
+git clone https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM \
 git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3 \
 git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_msgs \
 git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations \
@@ -27,7 +27,6 @@ sudo apt install python pip-python \
 pip install scipy numpy opencv-python opencv-contrib-python \
 ...
 
-Replace (USER) with your username (you can see it with echo $USER). \
 ... \
 echo "source ~/simulation_ws/devel/setup.bash" >> ~/.bashrc \ 
 source ~/.bashrc \
@@ -63,20 +62,18 @@ And for writing code, I recommend pycharm community. It can be installed through
 ... \
 pycharm-community \
 ... \
-and open a project -> select the Self_Localization_Intelligent_Mapping_SLIM folder. Set up the interpreter to be your system's python3 executable, File -> Settings -> Project -> Python Interpereter -> (click on the gear on the right) -> Add... -> Existing Environment -> Add /usr/bin/python3. This will ensure that pycharm has your installed python libraries and all of the ROS libraries.  \
+and open a project -> select the Self_Localization_Intelligent_Mapping_SLIM folder. Set up the interpreter to be your system's python3 executable, File -> Settings -> Project -> Python Interpereter -> (click on the gear on the right) -> Add... -> Existing Environment -> Add /usr/bin/python. This will ensure that pycharm has your installed python libraries and all of the ROS libraries.  \
 
 To test this code:  \
 ... \
-roslaunch dse_simulation demo_1_agent.launch \
+roslaunch dse_simulation 3_agents_split.launch \
 ... \
-This will start a gazebo simulation with a single agent and 3 tags lined up in front of it. Each of the 3 tags is seen and estimated by the agent. The estimates are visualized as a sample of 50 vectors from the mean and covariance of the estimate (Will be improved later to a covariance ellipse). \
-
-... \
-roslaunch dse_simulation 3_agents_moving_awayLine.launch \
-... \
-This will start a gazebo simulation with 3 agents facing 2 pairs of 2 tags. To start the agents moving, send a message to the controller of each agent. The consensus runs and combines the estimates of all agents. Rviz is set to display all objects as estimated by agent 0 (tb3_0).  \
+If you see a bunch of red errors, ctrl-C and run it again, it happens sometimes after launching it the first time. This will start a gazebo simulation and pull up rviz of 3 agents looking at 4 landmarks in a square. To start the agents moving, open a new terminal (ctrl-shift-E in terminator), and run
 ... \
 rostopic pub /control_on std_msgs/Bool "data: true" --once \
+... \
+This sends a message to the controller of each agent to start, and they should now be driving towards their waypoints. Agent 0 in on the left, 1 in the center, and 2 on the right. rviz shows purple covariance ellipses and yellow angular covariance triangles for each agent, initially set to what agent 0 knows. Quickly, agents 1 and 2 will break away from agent 0, and the covariance of agents 1 and 2 will explode. If you want to see where agent 1 thinks it is, select agent 1 from agent 1 in rviz, and it will be displayed. 
+
 ...
 
 Visualizing in RVIZ
@@ -90,6 +87,7 @@ Visualizing in RVIZ
 	- You can also go into each PoseArray and change the color so the pose arrows are individually identifiable
 		- It's recommended to change the true pose to green
 
+Note - these are a bit old, may be nonsense now....
 Node descriptions - 
 - aruco_pose_estimation_node in aruco_pose_estimation.py
 	- Inputs: Camera images
