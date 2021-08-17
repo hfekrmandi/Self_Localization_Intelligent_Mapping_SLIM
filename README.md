@@ -69,7 +69,7 @@ To test this code:  \
 ... \
 roslaunch dse_simulation 3_agents_split.launch \
 ... \
-If you see a bunch of red errors, ctrl-C and run it again, it happens sometimes after launching it the first time. This will start a gazebo simulation and pull up rviz of 3 agents looking at 4 landmarks in a square. To start the agents moving, open a new terminal (ctrl-shift-E in terminator), and run
+If you see a bunch of red errors, ctrl-C and run it again, it happens sometimes after launching it the first time. This will start a gazebo simulation and pull up rviz of 3 agents looking at 4 landmarks in a square. To start the agents moving, open a new terminal (ctrl-shift-E in terminator), and run \
 ... \
 rostopic pub /control_on std_msgs/Bool "data: true" --once \
 ... \
