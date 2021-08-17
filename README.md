@@ -23,7 +23,8 @@ cd .. \
 catkin_make
 
 sudo apt update \
-sudo apt install python pip-python \
+sudo apt install python python-pip \
+pip install --upgrade pip \
 pip install scipy numpy opencv-python opencv-contrib-python \
 ...
 
