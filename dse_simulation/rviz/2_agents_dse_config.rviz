@@ -97,7 +97,7 @@ Visualization Manager:
           Value: false
         tb3_0/wheel_right_link:
           Value: false
-        c/aruco_tag_backing_link:
+        tb3_1/aruco_tag_backing_link:
           Value: false
         tb3_1/aruco_tag_link:
           Value: false
@@ -156,6 +156,36 @@ Visualization Manager:
         tb3_2/wheel_left_link:
           Value: false
         tb3_2/wheel_right_link:
+          Value: false
+        tb3_3/aruco_tag_backing_link:
+          Value: false
+        tb3_3/aruco_tag_link:
+          Value: false
+        tb3_3/base_footprint:
+          Value: true
+        tb3_3/base_link:
+          Value: false
+        tb3_3/base_scan:
+          Value: false
+        tb3_3/camera_depth_frame:
+          Value: false
+        tb3_3/camera_depth_optical_frame:
+          Value: false
+        tb3_3/camera_link:
+          Value: false
+        tb3_3/camera_rgb_frame:
+          Value: false
+        tb3_3/camera_rgb_optical_frame:
+          Value: false
+        tb3_3/caster_back_link:
+          Value: false
+        tb3_3/imu_link:
+          Value: false
+        tb3_3/odom:
+          Value: false
+        tb3_3/wheel_left_link:
+          Value: false
+        tb3_3/wheel_right_link:
           Value: false
         world:
           Value: true
@@ -245,6 +275,30 @@ Visualization Manager:
                 tb3_2/wheel_left_link:
                   {}
                 tb3_2/wheel_right_link:
+                  {}
+          tb3_3/odom:
+            tb3_3/base_footprint:
+              tb3_3/base_link:
+                tb3_3/aruco_tag_backing_link:
+                  {}
+                tb3_3/aruco_tag_link:
+                  {}
+                tb3_3/base_scan:
+                  {}
+                tb3_3/camera_link:
+                  tb3_3/camera_depth_frame:
+                    tb3_3/camera_depth_optical_frame:
+                      {}
+                  tb3_3/camera_rgb_frame:
+                    tb3_3/camera_rgb_optical_frame:
+                      {}
+                tb3_3/caster_back_link:
+                  {}
+                tb3_3/imu_link:
+                  {}
+                tb3_3/wheel_left_link:
+                  {}
+                tb3_3/wheel_right_link:
                   {}
       Update Interval: 0
       Value: true
@@ -369,6 +423,40 @@ Visualization Manager:
         Value: true
       Enabled: false
       Keep: 1000
+      Name: Agent 3 from Agent 0
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.05999999865889549
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow (Flat)
+      Topic: /tb3_0/dse/vis/estimates/8
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 0.30000001192092896
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 1000
       Name: Agent 0 from Agent 1
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -470,8 +558,41 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: false
+      Name: Agent 3 from Agent 1
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.05999999865889549
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow (Flat)
+      Topic: /tb3_1/dse/vis/estimates/8
+      Unreliable: false
+      Value: false
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 0.30000001192092896
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
       Keep: 1000
-      Name: Agent 0 from Agent 1
+      Name: Agent 0 from Agent 2
       Position Tolerance: 0.10000000149011612
       Shape:
         Alpha: 1
@@ -505,7 +626,7 @@ Visualization Manager:
         Value: true
       Enabled: false
       Keep: 1000
-      Name: Agent 1 from Agent 1
+      Name: Agent 1 from Agent 2
       Position Tolerance: 0.10000000149011612
       Shape:
         Alpha: 1
@@ -539,7 +660,7 @@ Visualization Manager:
         Value: true
       Enabled: false
       Keep: 1000
-      Name: Agent 2 from Agent 1
+      Name: Agent 2 from Agent 2
       Position Tolerance: 0.10000000149011612
       Shape:
         Alpha: 1
@@ -552,6 +673,176 @@ Visualization Manager:
         Shaft Radius: 0.019999999552965164
         Value: Arrow (Flat)
       Topic: /tb3_2/dse/vis/estimates/7
+      Unreliable: false
+      Value: false
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 0.30000001192092896
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 1000
+      Name: Agent 3 from Agent 2
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.05999999865889549
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow (Flat)
+      Topic: /tb3_2/dse/vis/estimates/8
+      Unreliable: false
+      Value: false
+     - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 0.30000001192092896
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 1000
+      Name: Agent 0 from Agent 3
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.05999999865889549
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow (Flat)
+      Topic: /tb3_3/dse/vis/estimates/5
+      Unreliable: false
+      Value: false
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 0.30000001192092896
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 1000
+      Name: Agent 1 from Agent 3
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.05999999865889549
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow (Flat)
+      Topic: /tb3_3/dse/vis/estimates/6
+      Unreliable: false
+      Value: false
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 0.30000001192092896
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 1000
+      Name: Agent 2 from Agent 3
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.05999999865889549
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow (Flat)
+      Topic: /tb3_3/dse/vis/estimates/7
+      Unreliable: false
+      Value: false
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 0.30000001192092896
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 1000
+      Name: Agent 3 from Agent 3
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.05999999865889549
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow (Flat)
+      Topic: /tb3_3/dse/vis/estimates/8
       Unreliable: false
       Value: false
   Enabled: true
