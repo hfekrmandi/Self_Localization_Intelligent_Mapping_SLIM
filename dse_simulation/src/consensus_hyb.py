@@ -168,10 +168,10 @@ class hybrid_consensus:
                     self.inf_pubs[agent].publish(inf_results)
 
                 this_x = np.linalg.inv(inf_Y).dot(inf_y)[0,:,0,0]
-                if self.last[count] is not None and np.any(np.abs((this_x - self.last[count])) > 1):
-                    print('$$$$$$$$$$$$$$$$$$$$ ERROR $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
-                self.last[count] = this_x
-                count += 1
+                # if self.last[count] is not None and np.any(np.abs((this_x - self.last[count])) > 1):
+                #     print('$$$$$$$$$$$$$$$$$$$$ ERROR $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+                # self.last[count] = this_x
+                # count += 1
 
             self.inf_indices = []
             self.inf_id_list = []
