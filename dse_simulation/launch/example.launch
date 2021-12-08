@@ -12,19 +12,19 @@
   <!-- Starting locations of each robot/landmark (change x/y/z/yaw) -->
   <arg name="first_tb3_prefix" default="tb3_0"/>
   <arg name="first_tb3_model"  default="burger_5"/>
-  <arg name="first_tb3_x" 	default="-4.0"/>
+  <arg name="first_tb3_x" 	default="-10.0"/>
   <arg name="first_tb3_y" 	default=" 0.0"/>
   <arg name="first_tb3_z" 	default=" 0.0"/>
-  <arg name="first_tb3_yaw"    default=" 1.57079632679"/>
+  <arg name="first_tb3_yaw"    default=" 1.046666667"/>
   <arg name="first_tb3_id"     default=" 5"/>
   <arg name="first_tb3_tf"     default="tb3_0/base_footprint"/>
   
   <arg name="second_tb3_prefix" default="tb3_1"/>
   <arg name="second_tb3_model" default="burger_6"/>
-  <arg name="second_tb3_x" 	default=" 0.0"/>
+  <arg name="second_tb3_x" 	default=" 10.0"/>
   <arg name="second_tb3_y" 	default=" 0.0"/>
   <arg name="second_tb3_z" 	default=" 0.0"/>
-  <arg name="second_tb3_yaw"   default=" 1.57079632679"/>
+  <arg name="second_tb3_yaw"   default=" 2.0933333333"/>
   <arg name="second_tb3_id"    default=" 6"/>
   <arg name="second_tb3_tf"     default="tb3_1/base_footprint"/>
 
@@ -65,11 +65,11 @@
   <arg name="world_name"  default="world"/>
   <arg name="dim_state"  default="6"/>
   <!-- Maximum measurement distance for each agent -->
-  <arg name="meas_threshold"  default="8"/>
+  <arg name="meas_threshold"  default="9"/>
   <arg name="rate"  default="10"/>
   <arg name="consensus_rate"  default="10"/>
   <!-- Maximum communication distance for each agent -->
-  <arg name="comm_threshold"  default="8"/>
+  <arg name="comm_threshold"  default="9"/>
   <arg name="link_fail_prob"  default="0"/>
 
   <!-- Launch gazebo world -->
@@ -204,11 +204,11 @@
       <param name="threshold_dist" type="double" value="0.1" />
       <rosparam param="points_array">
                 <!-- Agent waypoint list of [x, y] positions, add/remove at will. Don't put them too close together, the controller is pretty stupid...  -->
-                [[-4, 0], [-9, 10], [-4, 15]]
+                [[-10, 0], [-8, 2.25], [-6, 5.50], [-5, 10], [-6, 14.5], [-8, 17.75], [-10, 20]]
       </rosparam>
     </node>
   </group>
-
+ <!-- Nodes for agent 1 -->
   <group ns = "$(arg second_tb3_prefix)">
     <node pkg="dse_simulation" type="fake_pose_sensor.py" name="fake_pose_sensor_node" output="screen">
       <param name="prefix" value="$(arg second_tb3_prefix)" />
@@ -256,11 +256,11 @@
       <param name="t_settle" type="double" value="0.5" />
       <param name="threshold_dist" type="double" value="0.1" />
       <rosparam param="points_array"> 
-                [[0, 0], [7, 10], [0, 15]]
+                [[10, 0], [8, 2.25], [6, 5.50], [5, 10], [6, 14.5], [8, 17.75], [10, 20]]
       </rosparam>
     </node>
   </group>
-
+<!-- Nodes for agent 2 -->
   <group ns = "$(arg third_tb3_prefix)">
     <node pkg="dse_simulation" type="fake_pose_sensor.py" name="fake_pose_sensor_node" output="screen">
       <param name="prefix" value="$(arg third_tb3_prefix)" />

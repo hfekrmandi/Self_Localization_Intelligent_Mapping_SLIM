@@ -53,10 +53,10 @@
   <arg name="world_id"  default="0"/>
   <arg name="world_name"  default="world"/>
   <arg name="dim_state"  default="6"/>
-  <arg name="meas_threshold"  default="5"/>
+  <arg name="meas_threshold"  default="55"/>
   <arg name="rate"  default="10"/>
   <arg name="consensus_rate"  default="10"/>
-  <arg name="comm_threshold"  default="5"/>
+  <arg name="comm_threshold"  default="55"/>
   <arg name="link_fail_prob"  default="0"/>
 
   <!-- Launch gazebo world -->
