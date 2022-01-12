@@ -45,7 +45,7 @@ roslib.load_manifest('dse_simulation')
 
 def main(args):
 
-    dump_file = "simulation_data_3_test.p"
+    dump_file = "simulation_data_4_agents_example.p"
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -64,7 +64,7 @@ def main(args):
 
     num_objects = len(object_ids)
     num_agents = len(agent_ids)
-    colors = ['k', 'r', 'y']
+    colors = ['k', 'r', 'y', 'b', 'c', 'm', 'g']
     agent_index = 1
     start_time = 0
     num_datapoints = np.shape(time[agent_index][time[agent_index] > start_time])[0]
