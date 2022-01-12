@@ -113,7 +113,7 @@
   <arg name="debug" default="false" />
   <arg name="gui" default="true" />
   <arg name="pause" default="false" />
-  <arg name="world" default="$(find dse_simulation)/world/2_agents_split.world" />
+  <arg name="world" default="$(find dse_simulation)/world/3_agents_split.world" />
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world)" />
     <arg name="debug" value="$(arg debug)" />
@@ -122,7 +122,7 @@
     <arg name="use_sim_time" value="true" />
   </include>
 
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find dse_simulation)/rviz/2_agents_dse_config.rviz" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find dse_simulation)/rviz/3_agents_dse_config.rviz" />
 
   <group ns = "$(arg first_tb3_prefix)">
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
@@ -178,13 +178,13 @@
   <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg third_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg third_tb3_prefix)/odom 1"/>
   <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg fourth_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg fourth_tb3_prefix)/odom 1"/>
 
-<!--  <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">-->
-<!--    <param name="n_params" value="4" />-->
-<!--    <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg second_tb3_prefix)]</rosparam>-->
-<!--    <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id)]</rosparam>-->
-<!--    <rosparam param="agent_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id)]</rosparam>-->
-<!--    <param name="dim_state" type="int" value="$(arg dim_state)" />-->
-<!--  </node>-->
+  <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">
+    <param name="n_params" value="4" />
+    <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg second_tb3_prefix)]</rosparam>
+    <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id)]</rosparam>
+    <rosparam param="agent_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id)]</rosparam>
+    <param name="dim_state" type="int" value="$(arg dim_state)" />
+  </node>
 
   <node pkg="dse_simulation" type="consensus_hyb.py" name="dse_consensus_node" output="screen">
     <rosparam param="objects" subst_value="True">$(arg list_of_agents)</rosparam>
