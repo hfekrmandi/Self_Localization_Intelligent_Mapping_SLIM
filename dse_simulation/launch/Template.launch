@@ -133,9 +133,9 @@
 
   <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">
     <param name="n_params" value="4" />
-    <rosparam param="objects" subst_value="True"> [$(arg first_tb3_prefix), $(arg second_tb3_prefix)]</rosparam>
-    <rosparam param="object_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id)]</rosparam>
-    <rosparam param="agent_ids" subst_value="True"> [$(arg first_tb3_id), $(arg second_tb3_id)]</rosparam>
+    <rosparam param="objects" subst_value="True">$(arg list_of_agents)</rosparam>
+    <rosparam param="object_ids" subst_value="True">$(arg initial_ids)</rosparam>
+    <rosparam param="agent_ids" subst_value="True">$(arg initial_ids)</rosparam>
     <param name="dim_state" type="int" value="$(arg dim_state)" />
   </node>
 
