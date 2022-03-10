@@ -60,33 +60,56 @@ class information_filter:
         self.agent_ids = rospy.get_param('~agent_ids')
         self.dim_state = rospy.get_param('~dim_state', 6)
 
+        #number if robots (agents) setup in launch file
         n_params = len(self.agent_ids)
+
+        #this command lessions to the terminal and when (rostopic pub /store_data sdt_msgs/Bool "data: true" --once)
+        #is called it will store it here.
+        #it then calls the stor_data function in this class. listed bellow
+        #bool is passed into the store_data function as an arg
         self.store_data_sub = rospy.Subscriber('/store_data', Bool, self.store_data)
 
+        #gets the gazebo object for first_tb3_model
         self.gazebo_model_object = gazebo_lib.GazeboModel(self.object_names)
         self.inf_results_subs = []
         self.agent_names = []
+
+        #n_params # of agents running
         for i in range(n_params):
+            #re-organizing data into easy to save data
             index = self.object_ids.index(self.agent_ids[i])
             self.agent_names.append(self.object_names[index])
 
+            #add / to the front of the name if it does not have one
             if len(self.agent_names[i]) != 0 and self.agent_names[i][0] != '/':
                 self.agent_names[i] = '/' + self.agent_names[i]
 
+            #example service name is </tb3_0/dse/inf/results>
             self.inf_results_subs.append(rospy.Subscriber(
                 self.agent_names[i] + "/dse/inf/results", InfFilterResults, self.results_callback, i))
 
+            #InfFilterResults is whatever message is posted or the data
+            #calls the results_callback() funtion in this class
+            #i = links the Subscriber to the agent number
+
+            #this sets up a 2-d array
+            # Example: time[x][y] where x = # of agents, y = time at given data point
             self.time.append([])
             self.true_poses.append([])
             self.est_poses.append([])
             self.est_covariances.append([])
 
+        #dim_state = dimensional states (x, y, z, roll, yaw, pitch)
         if self.dim_state == 6:
+            #dimensional objects = each object is: x, y, pitch <this is all we are using
             self.dim_obs = 3
+
+        #dim_state 12 = (6 positions, 6 velocity's)
         elif self.dim_state == 12:
+            #only need the 6 prams for saving
             self.dim_obs = 6
         else:
-            rospy.signal_shutdown('invalid state dimension passed in')
+            rospy.signal_shutdown('invalid state dimension passed in') #kills the process
 
     # Create pose_array for the information results
     def results_callback(self, data, agent_index):
@@ -136,32 +159,46 @@ class information_filter:
         self.est_covariances[agent_index].append(est_covariance)
 
     def store_data(self, data):
-        if data.data:
+        # checks if the "data=True" from (rostopic pub /store_data sdt_msgs/Bool "data: true" --once) is true
+        if data.data:  #this is from the message in the termminal
             time_np = []
             true_poses_np = []
             est_poses_np = []
             est_covariances_np = []
             for i in range(len(self.agent_ids)):
+                #np.array wraps all the data into an insertable type
                 time_np.append(np.array(self.time[i]))
                 true_poses_np.append(np.array(self.true_poses[i]))
                 est_poses_np.append(np.array(self.est_poses[i]))
                 est_covariances_np.append(np.array(self.est_covariances[i]))
+            #transers all the data to easy to save data
 
+            #the header is stored in the data file for pickle to be able to reconstruct the object
             header = '[header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances]'
+            #the object is rearanged into this configuration
             cal = [header, time_np, self.object_ids, self.object_names, self.agent_names, self.agent_ids,
                    true_poses_np, est_poses_np, est_covariances_np]
-            dump_file = "simulation_data_" + str(rospy.Time.now()) + ".p"
-            pickle.dump(cal, open(os.path.join(sys.path[0], dump_file), "wb"))
 
+            #this creates a unique named file and uses the pickle lib to dump the agents objects
+            dump_file = "simulation_data_" + str(rospy.Time.now()) + ".p"
+            #pickle.dump(obj, open_file)
+            pickle.dump(cal, open(os.path.join(sys.path[0], dump_file), "wb")) #wb write binary
 
 def main(args):
-
+    #creates a new node called <dse_plotting_node> this is the defualt name
+    #anonymous = True makes sure there is only one unique id with that name. if its called twice it will rename the
+    # proccess to <some_name_manchinename_id_id_id>
     rospy.init_node('dse_plotting_node', anonymous=True)
+
+    #this creates a new instance of the information_filter
     imf = information_filter()
     try:
+        #just loop untill Crtl-C
         rospy.spin()
+
+    #when the rospy.spin() is cancled from ctrl-c this code is called
     except KeyboardInterrupt:
-        print("Shutting down")
+        print("Store_Results.py: Shutting down")
 
 
 if __name__ == '__main__':

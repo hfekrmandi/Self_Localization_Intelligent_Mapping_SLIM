@@ -44,8 +44,17 @@ roslib.load_manifest('dse_simulation')
 
 
 def main(args):
+    #this allows results and agent_id to be changed in terminal
+    if len(args) != 3:
+        print(len(args))
+        print('plot_results.py consensus_name agent_#')
+        return
+    dump_file = args[1] #pickle comprestion of python class to save into data file
+    print(dump_file)
 
-    dump_file = "simulation_data_4_agents_example.p"
+    #dump_file = "simulation_data_4_agents_example.p"
+
+    #load the data from the dump_file into a array to extract object information
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -65,7 +74,17 @@ def main(args):
     num_objects = len(object_ids)
     num_agents = len(agent_ids)
     colors = ['k', 'r', 'y', 'b', 'c', 'm', 'g']
-    agent_index = 1
+
+    #this tells the plot_results what agent to plot
+    #agent_index = 1
+
+    #this imports the desired ploted agent from args
+    agent_index = int(args[2])
+    if agent_index > num_agents:
+        print("Agent_# does not exist in this sample")
+        return
+
+
     start_time = 0
     num_datapoints = np.shape(time[agent_index][time[agent_index] > start_time])[0]
     
@@ -150,7 +169,7 @@ def main(args):
         #plt.fill_between(np.array(time_data), error_dist - costd, error_dist + costd, color=colors[i % len(colors)], alpha=0.2)
 
     plt.legend()
-    plt.ylim(0, 0.5)
+    plt.ylim(0, 0.6)
     plt.xlabel('time (seconds)')
     plt.ylabel('distance error (m)')
     plt.title('error vs. time')
@@ -187,7 +206,7 @@ def main(args):
 
     plt.legend(prop={'size':50})
 
-    plt.ylim(0, 0.5)
+    plt.ylim(0, 0.6)
     plt.xlabel('time (seconds)')
     plt.ylabel('distance error (m)')
     plt.title('error vs. time')
