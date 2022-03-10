@@ -1,37 +1,56 @@
 # Autonomous-GNC-MAS
 
+## Running this code: 
+
+In a terminal, run: 
+```
+roslaunch dse_simulation 3_agents_split.launch
+```
+If you see a bunch of red errors, ctrl-C and run it again, it happens sometimes after launching it the first time. This will start a gazebo simulation and pull up rviz of 3 agents looking at 4 landmarks in a square. To start the agents moving, open a new terminal (ctrl-shift-E in terminator), and run
+```
+rostopic pub /control_on std_msgs/Bool "data: true" --once
+```
+This sends a message to the controller of each agent to start, and they should now be driving towards their waypoints. Agent 0 in on the left, 1 in the center, and 2 on the right. rviz shows purple covariance ellipses and yellow angular covariance triangles for each agent, initially set to what agent 0 knows. Quickly, agents 1 and 2 will break away from agent 0, and the covariance of agents 1 and 2 will explode. If you want to see where agent 1 thinks it is, select agent 1 from agent 1 in rviz, and it will be displayed. Then, after the simulation is complete, before terminating the launch file, store the simulation results by sending the following command in a new terminal window:
+```
+rostopic pub /store_data std_msgs/Bool "data: true" --once
+```
+Now you can terminate the launch file. Go to dse_simulation/src/ and find the new .p file (simulation_data_$[timestamp].p). Enter the name into the dump file variable in dse_simulation/src/plot_results.py, and run plot_results.py to see the final results. 
+
+## Installation instructions: 
+
 If you do not have ROS installed, follow the tutorial here for Ubuntu 18.04: http://wiki.ros.org/melodic/Installation/Ubuntu (Note- install ros-melodic-desktop-full, as this code currently requires the gazebo simulator to function). Follow all steps on that page and then continue with this document. 
 This code will not work with noetic or any future versions as of 5/11/2021, since ROS is deprecating TF prefixes, which means that multi-agent simulations are all but dead. 
 
 Installing this code - 
-Create a new ROS workspace for this code: \
-... \
-mkdir ~/simulation_ws \
-cd ~/simulation_ws \
-mkdir src \
-catkin_make \
-...
+Create a new ROS workspace for this code:
+```
+mkdir ~/simulation_ws
+cd ~/simulation_ws
+mkdir src
+catkin_make 
+```
 
-Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages: \
-... \
-cd ~/simulation_ws/src \
-git clone https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM \
-git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3 \
-git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_msgs \
-git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations \
-cd .. \
+Then, cd into ~/simulation_ws/src/ and clone this github repo. Also clone 3 turtlebot ROS packages:
+```
+cd ~/simulation_ws/src
+git clone https://github.com/hfekrmandi/Self_Localization_Intelligent_Mapping_SLIM
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_msgs
+git clone -b melodic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations
+cd ..
 catkin_make
+
 
 sudo apt update \
 sudo apt install python python-pip \
 pip install --upgrade pip \
 pip install scipy numpy opencv-python opencv-contrib-python \
-...
 
-... \
-echo "source ~/simulation_ws/devel/setup.bash" >> ~/.bashrc \ 
-source ~/.bashrc \
-...
+
+```
+echo "source ~/simulation_ws/devel/setup.bash" >> ~/.bashrc 
+source ~/.bashrc
+```
 
 Your directories should look like:
 - ~/simulation_ws
@@ -53,6 +72,7 @@ Your directories should look like:
 		- turtlebot3_simulations
 
 I also highly recommend installing terminator. It allows you to easily run multiple terminals simultaneously.
+
 With it open, you can use Ctrl-Shift-E to split a terminal horizontally, and Ctrl-Shift-O to split vertically. \
 ... \
 sudo apt update \
@@ -75,7 +95,7 @@ rostopic pub /control_on std_msgs/Bool "data: true" --once \
 ... \
 This sends a message to the controller of each agent to start, and they should now be driving towards their waypoints. Agent 0 in on the left, 1 in the center, and 2 on the right. rviz shows purple covariance ellipses and yellow angular covariance triangles for each agent, initially set to what agent 0 knows. Quickly, agents 1 and 2 will break away from agent 0, and the covariance of agents 1 and 2 will explode. If you want to see where agent 1 thinks it is, select agent 1 from agent 1 in rviz, and it will be displayed. 
 
-...
+
 
 Visualizing in RVIZ
 - Run the launch file dse_sim_3_robots.launch

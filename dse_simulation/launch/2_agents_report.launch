@@ -1,0 +1,222 @@
+
+<!-- Adding/removing an agent
+    Each agent has:
+      - Model and coordinates (Remove, or copy and rename/update another agent's block)
+      - Its values in the global lists of ids and tfs... (remove/add this agent's values)
+      - A group of nodes to control/run it (Remove, or copy and rename/update another agent's block)
+    Make sure to update/create each of these three sections
+-->
+
+<!-- Adding/removing a landmark
+    Each landmark has:
+      - Name and coordinates (Remove, or copy and rename/update another landmark's block)
+      - Its values in the global lists of ids and tfs... (remove/add this agent's values)
+    Make sure to update/create both of these two sections
+-->
+
+<launch>
+  <arg name="first_tb3_prefix" default="tb3_0"/>
+  <arg name="first_tb3_model"  default="burger_5"/>
+  <arg name="first_tb3_x" 	default="-10.0"/>
+  <arg name="first_tb3_y" 	default=" 0.0"/>
+  <arg name="first_tb3_z" 	default=" 0.0"/>
+  <arg name="first_tb3_yaw"    default=" 1.57079632679"/>
+  <arg name="first_tb3_id"     default=" 5"/>
+  <arg name="first_tb3_tf"     default="tb3_0/base_footprint"/>
+  <arg name="first_tb3_waypoints" default="[[-10, 0], [-5, 10], [-10, 15]]"/>
+
+  <arg name="second_tb3_prefix" default="tb3_1"/>
+  <arg name="second_tb3_model" default="burger_6"/>
+  <arg name="second_tb3_x" 	default=" 10.0"/>
+  <arg name="second_tb3_y" 	default=" 0.0"/>
+  <arg name="second_tb3_z" 	default=" 0.0"/>
+  <arg name="second_tb3_yaw"   default=" 1.57079632679"/>
+  <arg name="second_tb3_id"    default=" 6"/>
+  <arg name="second_tb3_tf"     default="tb3_1/base_footprint"/>
+  <arg name="second_tb3_waypoints" default="[[10, 0], [5, 10], [10, 15]]"/>
+
+  <arg name="landmark_1_x"    default=" -5.0"/>
+  <arg name="landmark_1_y"    default=" 5.0"/>
+  <arg name="landmark_1_yaw"  default=" 4.7124"/>
+  <arg name="landmark_1_id"   default="0"/>
+  <arg name="landmark_1_name" default="aruco_marker_0"/>
+
+  <arg name="landmark_2_x"    default=" -5.0"/>
+  <arg name="landmark_2_y"    default=" 15.0"/>
+  <arg name="landmark_2_yaw"  default=" 4.7124"/>
+  <arg name="landmark_2_id"   default="1"/>
+  <arg name="landmark_2_name" default="aruco_marker_1"/>
+
+  <arg name="landmark_3_x"    default=" 5.0"/>
+  <arg name="landmark_3_y"    default=" 5.0"/>
+  <arg name="landmark_3_yaw"  default=" 4.7124"/>
+  <arg name="landmark_3_id"   default="2"/>
+  <arg name="landmark_3_name" default="aruco_marker_2"/>
+
+  <arg name="landmark_4_x"    default=" 5.0"/>
+  <arg name="landmark_4_y"    default=" 15.0"/>
+  <arg name="landmark_4_yaw"  default=" 4.7124"/>
+  <arg name="landmark_4_id"   default="3"/>
+  <arg name="landmark_4_name" default="aruco_marker_3"/>
+
+  <arg name="world_id"  default="0"/>
+  <arg name="world_name"  default="world"/>
+  <arg name="dim_state"  default="6"/>
+  <arg name="meas_threshold"  default="50"/>
+  <arg name="rate"  default="10"/>
+  <arg name="consensus_rate"  default="10"/>
+  <arg name="comm_threshold"  default="50"/>
+  <arg name="link_fail_prob"  default="0"/>
+
+  <!-- List of prefixes for each agent -->
+  <arg name="list_of_agents" default="[$(arg first_tb3_prefix), $(arg second_tb3_prefix)]"/>
+  <!-- List of [id, tf] for each agent -->
+  <arg name="agents_id_to_tf" default="[[$(arg first_tb3_id), $(arg first_tb3_tf)], [$(arg second_tb3_id), $(arg second_tb3_tf)]]"/>
+  <!-- List of [id, tf] for each landmark and agent -->
+  <arg name="all_id_to_tf" default="[[$(arg landmark_1_id), $(arg landmark_1_name)], [$(arg landmark_2_id), $(arg landmark_2_name)], [$(arg landmark_3_id), $(arg landmark_3_name)], [$(arg landmark_4_id), $(arg landmark_4_name)], [$(arg first_tb3_id), $(arg first_tb3_tf)], [$(arg second_tb3_id), $(arg second_tb3_tf)]]"/>
+  <!-- List of [world_id, world_name, [landmarks]] -->
+  <arg name="fixed_relations" default="[[$(arg world_id), $(arg world_name), [$(arg landmark_1_id), $(arg landmark_2_id), $(arg landmark_3_id), $(arg landmark_4_id)]]]"/>
+  <!-- World ids -->
+  <arg name="fixed_ids" default="[0]"/>
+  <!-- Pose of each world id -->
+  <arg name="fixed_states" default="[[0, 0, 0, 0, 0, 0]]"/>
+  <!-- List of agent ids -->
+  <arg name="initial_ids" default="[$(arg first_tb3_id), $(arg second_tb3_id)]"/>
+  <!-- List of initial agent poses to pass to each agent ([x, y, yaw, x_dot, y_dot, yaw_dot]) -->
+  <arg name="initial_estimates" default="[$(arg first_tb3_x),  $(arg first_tb3_y),  $(arg first_tb3_yaw),  0, 0, 0,
+                                          $(arg second_tb3_x),  $(arg second_tb3_y),  $(arg second_tb3_yaw),  0, 0, 0]"/>
+
+  <!-- Launch gazebo world -->
+  <arg name="debug" default="false" />
+  <arg name="gui" default="true" />
+  <arg name="pause" default="false" />
+  <arg name="world" default="$(find dse_simulation)/world/3_agents_split.world" />
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world)" />
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg pause)" />
+    <arg name="use_sim_time" value="true" />
+  </include>
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find dse_simulation)/rviz/3_agents_dse_config.rviz" />
+
+  <group ns = "$(arg first_tb3_prefix)">
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg first_tb3_model).urdf.xacro" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
+      <param name="publish_frequency" type="double" value="50.0" />
+      <param name="tf_prefix" value="$(arg first_tb3_prefix)" />
+    </node>
+
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg first_tb3_prefix) -x $(arg first_tb3_x) -y $(arg first_tb3_y) -z $(arg first_tb3_z) -Y $(arg first_tb3_yaw) -param robot_description" />
+  </group>
+
+  <group ns = "$(arg second_tb3_prefix)">
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find dse_turtlebot_descriptions)/urdf/turtlebot3_$(arg second_tb3_model).urdf.xacro" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
+      <param name="publish_frequency" type="double" value="50.0" />
+      <param name="tf_prefix" value="$(arg second_tb3_prefix)" />
+    </node>
+
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg second_tb3_prefix) -x $(arg second_tb3_x) -y $(arg second_tb3_y) -z $(arg second_tb3_z) -Y $(arg second_tb3_yaw) -param robot_description" />
+  </group>
+
+  <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg landmark_1_name)_tf_broadcaster"  args="$(arg landmark_1_x) $(arg landmark_1_y) 0 $(arg landmark_1_yaw) 0 0 /world /$(arg landmark_1_name) 1"/>
+  <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg landmark_2_name)_tf_broadcaster"  args="$(arg landmark_2_x) $(arg landmark_2_y) 0 $(arg landmark_2_yaw) 0 0 /world /$(arg landmark_2_name) 1"/>
+  <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg landmark_3_name)_tf_broadcaster"  args="$(arg landmark_3_x) $(arg landmark_3_y) 0 $(arg landmark_3_yaw) 0 0 /world /$(arg landmark_3_name) 1"/>
+  <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg landmark_4_name)_tf_broadcaster"  args="$(arg landmark_4_x) $(arg landmark_4_y) 0 $(arg landmark_4_yaw) 0 0 /world /$(arg landmark_4_name) 1"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg first_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg first_tb3_prefix)/odom 1"/>
+  <node pkg="tf" type="static_transform_publisher" name="world_to_$(arg second_tb3_prefix)_tf_broadcaster"  args="0 0 0 0 0 0 /world /$(arg second_tb3_prefix)/odom 1"/>
+
+  <node pkg="dse_simulation" type="store_results.py" name="dse_store_results_node" output="screen">
+    <param name="n_params" value="4" />
+    <rosparam param="objects" subst_value="True">$(arg list_of_agents)</rosparam>
+    <rosparam param="object_ids" subst_value="True">$(arg initial_ids)</rosparam>
+    <rosparam param="agent_ids" subst_value="True">$(arg initial_ids)</rosparam>
+    <param name="dim_state" type="int" value="$(arg dim_state)" />
+  </node>
+
+  <node pkg="dse_simulation" type="consensus_hyb.py" name="dse_consensus_node" output="screen">
+    <rosparam param="objects" subst_value="True">$(arg list_of_agents)</rosparam>
+    <param name="dim_state" type="int" value="$(arg dim_state)" />
+      <param name="rate" type="double" value="$(arg consensus_rate)" />
+      <rosparam param="id_to_tf" subst_value="True">$(arg agents_id_to_tf)</rosparam>
+      <param name="comm_threshold" type="double" value="$(arg comm_threshold)" />
+      <param name="fail_prob" type="double" value="$(arg link_fail_prob)" />
+  </node>
+
+  <group ns = "$(arg first_tb3_prefix)">
+    <node pkg="dse_simulation" type="fake_pose_sensor.py" name="fake_pose_sensor_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3_prefix)" />
+      <param name="rate" type="int" value="$(arg rate)" />
+      <param name="meas_threshold" type="double" value="$(arg meas_threshold)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <rosparam param="id_to_tf" subst_value="True">$(arg all_id_to_tf)</rosparam>
+      <rosparam param="fixed_relations" subst_value="True">$(arg fixed_relations)</rosparam>
+    </node>
+
+    <node pkg="dse_simulation" type="information_filter_fake_meas.py" name="information_filter_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <param name="rate" type="double" value="$(arg rate)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+      <rosparam param="fixed_ids" subst_value="True">$(arg fixed_ids)</rosparam>
+      <rosparam param="fixed_states" subst_value="True">$(arg fixed_states)</rosparam>
+      <rosparam param="initial_ids" subst_value="True">$(arg initial_ids)</rosparam>
+      <rosparam param="initial_estimates" subst_value="True">$(arg initial_estimates)</rosparam>
+    </node>
+
+    <node pkg="dse_simulation" type="visualize_estimates_odometry.py" name="dse_gazebo_visualization_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg first_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+
+    <node pkg="dse_simulation" type="waypoint_controller.py" name="waypoint_controller_node" output="screen">
+      <param name="prefix" value="$(arg first_tb3_prefix)" />
+      <param name="fwd_vel" type="double" value="0.2" />
+      <param name="t_settle" type="double" value="0.5" />
+      <param name="threshold_dist" type="double" value="0.1" />
+      <rosparam param="points_array" subst_value="True">$(arg first_tb3_waypoints)</rosparam>
+    </node>
+  </group>
+
+  <group ns = "$(arg second_tb3_prefix)">
+    <node pkg="dse_simulation" type="fake_pose_sensor.py" name="fake_pose_sensor_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3_prefix)" />
+      <param name="rate" type="int" value="$(arg rate)" />
+      <param name="meas_threshold" type="double" value="$(arg meas_threshold)" />
+      <param name="id" type="int" value="$(arg second_tb3_id)" />
+      <rosparam param="id_to_tf" subst_value="True">$(arg all_id_to_tf)</rosparam>
+      <rosparam param="fixed_relations" subst_value="True">$(arg fixed_relations)</rosparam>
+    </node>
+
+    <node pkg="dse_simulation" type="information_filter_fake_meas.py" name="information_filter_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg second_tb3_id)" />
+      <param name="rate" type="double" value="$(arg rate)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+      <rosparam param="fixed_ids" subst_value="True">$(arg fixed_ids)</rosparam>
+      <rosparam param="fixed_states" subst_value="True">$(arg fixed_states)</rosparam>
+      <rosparam param="initial_ids" subst_value="True">$(arg initial_ids)</rosparam>
+      <rosparam param="initial_estimates" subst_value="True">$(arg initial_estimates)</rosparam>
+    </node>
+
+    <node pkg="dse_simulation" type="visualize_estimates_odometry.py" name="dse_gazebo_visualization_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3_prefix)" />
+      <param name="id" type="int" value="$(arg second_tb3_id)" />
+      <param name="dim_state" type="int" value="$(arg dim_state)" />
+    </node>
+
+    <node pkg="dse_simulation" type="waypoint_controller.py" name="waypoint_controller_node" output="screen">
+      <param name="prefix" value="$(arg second_tb3_prefix)" />
+      <param name="fwd_vel" type="double" value="0.2" />
+      <param name="t_settle" type="double" value="0.5" />
+      <param name="threshold_dist" type="double" value="0.1" />
+      <rosparam param="points_array" subst_value="True">$(arg second_tb3_waypoints)</rosparam>
+    </node>
+  </group>
+</launch>

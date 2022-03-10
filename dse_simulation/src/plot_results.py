@@ -25,6 +25,17 @@ import tf_conversions
 import tf2_ros
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
+SMALL_SIZE = 50
+MEDIUM_SIZE = 50
+BIGGER_SIZE = 50
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 import gazebo_lib
 import dse_lib
@@ -33,8 +44,17 @@ roslib.load_manifest('dse_simulation')
 
 
 def main(args):
+    #this allows results and agent_id to be changed in terminal
+    if len(args) != 3:
+        print(len(args))
+        print('plot_results.py consensus_name agent_#')
+        return
+    dump_file = args[1] #pickle comprestion of python class to save into data file
+    print(dump_file)
 
-    dump_file = "simulation_data_consensus.p"
+    #dump_file = "simulation_data_4_agents_example.p"
+
+    #load the data from the dump_file into a array to extract object information
     cal = pickle.load(open(os.path.join(sys.path[0], dump_file), "rb"))
     [header, time, object_ids, object_names, agent_names, agent_ids, true_poses, est_poses, est_covariances] = cal
     print('got data')
@@ -53,8 +73,18 @@ def main(args):
 
     num_objects = len(object_ids)
     num_agents = len(agent_ids)
-    colors = ['k', 'r', 'y']
-    agent_index = 1
+    colors = ['k', 'r', 'y', 'b', 'c', 'm', 'g']
+
+    #this tells the plot_results what agent to plot
+    #agent_index = 1
+
+    #this imports the desired ploted agent from args
+    agent_index = int(args[2])
+    if agent_index > num_agents:
+        print("Agent_# does not exist in this sample")
+        return
+
+
     start_time = 0
     num_datapoints = np.shape(time[agent_index][time[agent_index] > start_time])[0]
     
@@ -69,8 +99,8 @@ def main(args):
     #plt.subplot(211)
     #plt.tight_layout()
     plt.grid()
-    plt.plot(0, 0, 'k-', lw=1, label='true')
-    plt.plot(0, 0, 'k--', lw=1, label='estimated')
+    plt.plot(0, 0, 'k-', lw=5, label='true')
+    plt.plot(0, 0, 'k--', lw=5, label='estimated')
     for i in range(num_objects):
         if object_ids[i] in agent_ids:
             name = agent_names[agent_ids.index(object_ids[i])]
@@ -93,8 +123,8 @@ def main(args):
                 if np.linalg.norm(est_data[j-1] - est_data[j]) > 0.1 and np.linalg.norm(est_data[j] - est_data[j+1]) > 0.1:
                     est_data[j] = est_data[j-1]
 
-        plt.plot(true_data[:, 0], true_data[:, 1], colors[i % len(colors)] + '-', lw=1)
-        plt.plot(est_data[:, 0], est_data[:, 1], colors[i % len(colors)] + '--', lw=1, label=name)
+        plt.plot(true_data[:, 0], true_data[:, 1], colors[i % len(colors)] + '-', lw=5)
+        plt.plot(est_data[:, 0], est_data[:, 1], colors[i % len(colors)] + '--', lw=5, label=name)
 
         # ax = plt.gca()
         # for ellipse in covar_points:
@@ -107,6 +137,9 @@ def main(args):
     plt.xlabel('x (m)')
     plt.ylabel('y (m)')
     plt.title('true vs. estimated position')
+    # plt.annotate('local max', xy=(2, 1), xytext=(3, 1.5),
+    #              arrowprops=dict(facecolor='black', shrink=0.05),
+    #              )
 
     plt.figure()
     #plt.subplot(212)
@@ -128,7 +161,7 @@ def main(args):
         for j in range(len(error_dist)):
             if error_dist[j] > 0.5:
                 print()
-        plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '-', lw=2, label=name)
+        plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '-', lw=5, label=name)
 
         covar_x = est_covariances[agent_index][start:end, i, 0, 0]
         covar_y = est_covariances[agent_index][start:end, i, 1, 1]
@@ -136,10 +169,13 @@ def main(args):
         #plt.fill_between(np.array(time_data), error_dist - costd, error_dist + costd, color=colors[i % len(colors)], alpha=0.2)
 
     plt.legend()
-    plt.ylim(0, 0.5)
+    plt.ylim(0, 0.6)
     plt.xlabel('time (seconds)')
     plt.ylabel('distance error (m)')
     plt.title('error vs. time')
+    # plt.annotate('local max', xy=(2, 1), xytext=(3, 1.5),
+    #              arrowprops=dict(facecolor='black', shrink=0.05),
+    #              )
 
     plt.figure()
     #plt.subplot(212)
@@ -161,18 +197,22 @@ def main(args):
         for j in range(len(error_dist)):
             if error_dist[j] > 0.5:
                 print()
-        plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '-', lw=2, label=name)
+        plt.plot(np.array(time_data), error_dist, colors[i % len(colors)] + '-', lw=5, label=name)
 
         covar_x = est_covariances[agent_index][start:end, i, 0, 0]
         covar_y = est_covariances[agent_index][start:end, i, 1, 1]
         costd = np.sqrt(np.sqrt(covar_x**2 + covar_y**2))
         plt.fill_between(np.array(time_data), error_dist - costd, error_dist + costd, color=colors[i % len(colors)], alpha=0.2)
 
-    plt.legend()
-    plt.ylim(0, 0.5)
+    plt.legend(prop={'size':50})
+
+    plt.ylim(0, 0.6)
     plt.xlabel('time (seconds)')
     plt.ylabel('distance error (m)')
     plt.title('error vs. time')
+    # plt.annotate('local max', xy=(2, 1), xytext=(3, 1.5),
+    #              arrowprops=dict(facecolor='black', shrink=0.05),
+    #              )
     plt.show()
 
 
@@ -182,13 +222,16 @@ if __name__ == '__main__':
 
 
 
-# plt.plot(self.x_permanent, self.y_permanent, 'r.', lw=2)
-# # plt.plot(self.est_1_xyt_permanent[:][0], self.est_1_xyt_permanent[:][1], 'r-', lw=2)
-# # plt.plot(self.est_2_xyt_permanent[:][0], self.est_2_xyt_permanent[:][1], 'g-', lw=2)
-# # plt.plot(self.est_3_xyt_permanent[:][0], self.est_3_xyt_permanent[:][1], 'b-', lw=2)
+# plt.plot(self.x_permanent, self.y_permanent, 'r.', lw=5)
+# # plt.plot(self.est_1_xyt_permanent[:][0], self.est_1_xyt_permanent[:][1], 'r-', lw=5)
+# # plt.plot(self.est_2_xyt_permanent[:][0], self.est_2_xyt_permanent[:][1], 'g-', lw=5)
+# # plt.plot(self.est_3_xyt_permanent[:][0], self.est_3_xyt_permanent[:][1], 'b-', lw=5)
 # plt.xlabel('x (m)')
 # plt.ylabel('y (m)')
 # plt.title('agent 1s trajectory estimates')
+    # plt.annotate('local max', xy=(2, 1), xytext=(3, 1.5),
+    #              arrowprops=dict(facecolor='black', shrink=0.05),
+    #              )
 # plt.grid(True)
 #
 # plt.show(block=False)
@@ -282,13 +325,16 @@ if __name__ == '__main__':
 #     def plot_callback(self, data):
 #
 #         plt.clf()
-#         plt.plot(self.x_permanent, self.y_permanent, 'r.', lw=2)
-#         # plt.plot(self.est_1_xyt_permanent[:][0], self.est_1_xyt_permanent[:][1], 'r-', lw=2)
-#         # plt.plot(self.est_2_xyt_permanent[:][0], self.est_2_xyt_permanent[:][1], 'g-', lw=2)
-#         # plt.plot(self.est_3_xyt_permanent[:][0], self.est_3_xyt_permanent[:][1], 'b-', lw=2)
+#         plt.plot(self.x_permanent, self.y_permanent, 'r.', lw=5)
+#         # plt.plot(self.est_1_xyt_permanent[:][0], self.est_1_xyt_permanent[:][1], 'r-', lw=5)
+#         # plt.plot(self.est_2_xyt_permanent[:][0], self.est_2_xyt_permanent[:][1], 'g-', lw=5)
+#         # plt.plot(self.est_3_xyt_permanent[:][0], self.est_3_xyt_permanent[:][1], 'b-', lw=5)
 #         plt.xlabel('x (m)')
 #         plt.ylabel('y (m)')
 #         plt.title('agent 1s trajectory estimates')
+    # plt.annotate('local max', xy=(2, 1), xytext=(3, 1.5),
+    #              arrowprops=dict(facecolor='black', shrink=0.05),
+    #              )
 #         plt.grid(True)
 #
 #         plt.show(block=False)
@@ -307,3 +353,5 @@ if __name__ == '__main__':
 #
 # if __name__ == '__main__':
 #     main(sys.argv)
+
+
